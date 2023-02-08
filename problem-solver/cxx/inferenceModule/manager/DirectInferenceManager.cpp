@@ -46,30 +46,34 @@ ScAddr DirectInferenceManager::applyInference(
     return solutionTreeGenerator->createSolution(outputStructure, targetAchieved);
   }
 
-  vector<ScAddrQueue> formulasQueuesByPriority = createFormulasQueuesListByPriority(formulasSet);
-  if (formulasQueuesByPriority.empty())
+  std::vector<std::vector<ScAddr>> vectorOfVectorsOfFormulas;
+
+  ScAddr setOfFormulas =
+      utils::IteratorUtils::getAnyByOutRelation(ms_context, formulasSet, scAgentsCommon::CoreKeynodes::rrel_1);
+  while (setOfFormulas.IsValid())
+  {
+    std::vector<ScAddr> vectorOfFormulas;
+    vectorOfVectorsOfFormulas.push_back(utils::IteratorUtils::getAllWithType(ms_context, setOfFormulas, ScType::Node));
+    setOfFormulas = utils::IteratorUtils::getNextFromSet(ms_context, formulasSet, setOfFormulas);
+  }
+
+  if (vectorOfVectorsOfFormulas.empty())
   {
     SC_THROW_EXCEPTION(utils::ExceptionItemNotFound, "No rule sets found.");
   }
 
-  ScAddrVector checkedFormulas;
-  ScAddrQueue uncheckedFormulas;
-
-  ScAddr formula;
-  bool isGenerated;
-  SC_LOG_DEBUG("Start rule applying. There is " + to_string(formulasQueuesByPriority.size()) + " formulas sets");
-  for (size_t formulasQueueIndex = 0; formulasQueueIndex < formulasQueuesByPriority.size() && !targetAchieved;
-       formulasQueueIndex++)
+  
+  SC_LOG_DEBUG("Start rule applying. There is " + to_string(vectorOfVectorsOfFormulas.size()) + " formulas sets");
+  for (int indexOfFormulaSet = 0; indexOfFormulaSet < vectorOfVectorsOfFormulas.size() && !targetAchieved; ++indexOfFormulaSet)
   {
-    uncheckedFormulas = formulasQueuesByPriority[formulasQueueIndex];
+    vector<ScAddr> const & formulaSet = vectorOfVectorsOfFormulas[indexOfFormulaSet];
     SC_LOG_DEBUG(
-        "There is " + to_string(uncheckedFormulas.size()) + " formulas in " + to_string(formulasQueueIndex + 1) +
+        "There is " + to_string(formulaSet.size()) + " formulas in " + to_string(indexOfFormulaSet + 1) +
         " set");
-    while (!uncheckedFormulas.empty())
+    for (auto formula : formulaSet)
     {
-      formula = uncheckedFormulas.front();
       SC_LOG_DEBUG("Trying to generate by formula: " + ms_context->HelperGetSystemIdtf(formula));
-      isGenerated = useFormula(formula, argumentVector, outputStructure);
+      bool isGenerated = useFormula(formula, argumentVector, outputStructure);
       SC_LOG_DEBUG(std::string("Logical formula is ") + (isGenerated ? "generated" : "not generated"));
       if (isGenerated)
       {
@@ -82,17 +86,10 @@ ScAddr DirectInferenceManager::applyInference(
         }
         else
         {
-          ContainersUtils::addToQueue(checkedFormulas, uncheckedFormulas);
-          formulasQueueIndex = 0;
-          checkedFormulas.clear();
+          indexOfFormulaSet = -1;
+          break;
         }
       }
-      else
-      {
-        checkedFormulas.push_back(formula);
-      }
-
-      uncheckedFormulas.pop();
     }
   }
 
