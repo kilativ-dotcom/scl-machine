@@ -79,6 +79,7 @@ LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
   LogicFormulaResult result;
   result.isGenerated = false;
   std::vector<ScTemplateParams> paramsVector = ReplacementsUtils::getReplacementsToScTemplateParams(replacements);
+  std::set<std::string> varNames = templateSearcher->getVarNames(formulaTemplate);
   if (paramsVector.empty())
   {
     SC_LOG_DEBUG("Atomic logical formula " + context->HelperGetSystemIdtf(formulaTemplate) + " is not generated");
@@ -103,10 +104,34 @@ LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
       {
         result.isGenerated = true;
         result.value = true;
-        result.replacements = replacements;
+        Replacements temporalReplacements;
+        for (const auto & name: varNames)
+        {
+          ScAddrVector replacementsVector;
+          bool generationHasVar =
+              generationResult.GetReplacements().find(name) != generationResult.GetReplacements().end();
+          ScAddr outResult;
+          bool paramsHaveVar = scTemplateParams.Get(name, outResult);
+          if (paramsHaveVar)
+          {
+            SC_LOG_DEBUG("took replacement for " + name);
+            replacementsVector.push_back(outResult);
+          }
+          else if (generationHasVar)
+          {
+            SC_LOG_WARNING("generated replacement for " + name);
+            replacementsVector.push_back(generationResult[name]);
+          }
+          else
+            SC_THROW_EXCEPTION(utils::ScException, "generation result and template params do not have replacement for " + name);
+          temporalReplacements[name] = replacementsVector;
+        }
+        result.replacements = ReplacementsUtils::uniteReplacements(result.replacements, temporalReplacements);
       }
 
+      SC_LOG_DEBUG("before context->HelperGetSystemIdtf");
       SC_LOG_DEBUG("Atomic logical formula " + context->HelperGetSystemIdtf(formulaTemplate) + " is generated");
+      SC_LOG_DEBUG("after  context->HelperGetSystemIdtf");
       for (size_t i = 0; i < generationResult.Size(); ++i)
       {
         templateSearcher->addParamIfNotPresent(generationResult[i]);
