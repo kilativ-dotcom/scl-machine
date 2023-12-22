@@ -48,7 +48,7 @@ void TemplateSearcherInStructures::searchTemplate(
     {
       context->HelperSmartSearchTemplate(
           searchTemplate,
-          [templateParams, &result, &variables](ScTemplateSearchResultItem const & item) -> ScTemplateSearchRequest {
+          [templateParams, &result, &variables, this](ScTemplateSearchResultItem const & item) -> ScTemplateSearchRequest {
             // Add search result item to the answer container
             for (ScAddr const & variable : variables)
             {
@@ -62,7 +62,10 @@ void TemplateSearcherInStructures::searchTemplate(
                 result[variable].push_back(argument);
               }
             }
-            return ScTemplateSearchRequest::STOP;
+            if (replacementsUsingType == ReplacementsUsingType::REPLACEMENTS_FIRST)
+              return ScTemplateSearchRequest::STOP;
+            else
+              return ScTemplateSearchRequest::CONTINUE;
           },
           [this](ScAddr const & item) -> bool {
             // Filter result item belonging to any of the input structures

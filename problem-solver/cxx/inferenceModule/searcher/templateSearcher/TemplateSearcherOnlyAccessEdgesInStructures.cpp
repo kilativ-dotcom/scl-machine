@@ -35,7 +35,7 @@ void TemplateSearcherOnlyAccessEdgesInStructures::searchTemplate(
     {
       context->HelperSmartSearchTemplate(
           searchTemplate,
-          [templateParams, &result, &varNames](ScTemplateSearchResultItem const & item) -> ScTemplateSearchRequest {
+          [templateParams, &result, &varNames, this](ScTemplateSearchResultItem const & item) -> ScTemplateSearchRequest {
             // Add search result item to the answer container
             for (std::string const & varName : varNames)
             {
@@ -49,11 +49,14 @@ void TemplateSearcherOnlyAccessEdgesInStructures::searchTemplate(
                 result[varName].push_back(argument);
               }
             }
-            return ScTemplateSearchRequest::STOP;
+            if (replacementsUsingType == ReplacementsUsingType::REPLACEMENTS_FIRST)
+              return ScTemplateSearchRequest::STOP;
+            else
+              return ScTemplateSearchRequest::CONTINUE;
           },
           [this](ScAddr const & item) -> bool {
             // Filter result item belonging to any of the input structures
-            return context->GetElementType(item).BitAnd(ScType::EdgeAccess) && std::any_of(
+            return !context->GetElementType(item).BitAnd(ScType::EdgeAccess) || std::any_of(
                 inputStructures.cbegin(), inputStructures.cend(), [&item, this](ScAddr const & structure) -> bool {
                   return context->HelperCheckEdge(structure, item, ScType::EdgeAccessConstPosPerm);
                 });
