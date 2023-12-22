@@ -6,6 +6,7 @@
 
 #include "InferenceManagerFactory.hpp"
 
+#include "searcher/templateSearcher/TemplateSearcherOnlyAccessEdgesInStructures.hpp"
 #include "searcher/templateSearcher/TemplateSearcherInStructures.hpp"
 #include "searcher/templateSearcher/TemplateSearcherGeneral.hpp"
 #include "manager/templateManager/TemplateManagerFixedArguments.hpp"
@@ -46,6 +47,10 @@ std::unique_ptr<InferenceManagerAbstract> InferenceManagerFactory::constructDire
   {
     templateSearcher = std::make_shared<TemplateSearcherInStructures>(context);
   }
+  else if (inferenceFlowConfig.searchType == SEARCH_ONLY_ACCESS_EDGES_IN_STRUCTURES)
+  {
+    templateSearcher = std::make_shared<TemplateSearcherOnlyAccessEdgesInStructures>(context);
+  }
   strategyAll->setTemplateSearcher(templateSearcher);
 
   return strategyAll;
@@ -82,6 +87,10 @@ std::unique_ptr<InferenceManagerAbstract> InferenceManagerFactory::constructDire
   else if (inferenceFlowConfig.searchType == SEARCH_IN_STRUCTURES)
   {
     templateSearcher = std::make_shared<TemplateSearcherInStructures>(context);
+  }
+  else if (inferenceFlowConfig.searchType == SEARCH_ONLY_ACCESS_EDGES_IN_STRUCTURES)
+  {
+    templateSearcher = std::make_shared<TemplateSearcherOnlyAccessEdgesInStructures>(context);
   }
   strategyTarget->setTemplateSearcher(templateSearcher);
 
