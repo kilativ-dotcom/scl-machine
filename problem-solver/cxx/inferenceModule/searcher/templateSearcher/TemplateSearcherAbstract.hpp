@@ -14,6 +14,8 @@
 
 #include "sc-agents-common/utils/CommonUtils.hpp"
 
+#include "inferenceConfig/InferenceConfig.hpp"
+
 #include "utils/ReplacementsUtils.hpp"
 
 namespace inference
@@ -22,7 +24,7 @@ namespace inference
 class TemplateSearcherAbstract
 {
 public:
-  explicit TemplateSearcherAbstract(ScMemoryContext * context);
+  explicit TemplateSearcherAbstract(ScMemoryContext * context, ReplacementsUsingType replacementsUsingType = ReplacementsUsingType::REPLACEMENTS_FIRST);
 
   virtual ~TemplateSearcherAbstract() = default;
 
@@ -49,6 +51,16 @@ public:
 
   ScAddrVector getInputStructures() const;
 
+  void setReplacementsUsingType(ReplacementsUsingType const otherReplacementsUsingType)
+  {
+    replacementsUsingType = otherReplacementsUsingType;
+  }
+
+  ReplacementsUsingType getReplacementsUsingType() const
+  {
+    return replacementsUsingType;
+  }
+
 protected:
   virtual void searchTemplateWithContent(
       ScTemplate const & searchTemplate,
@@ -61,5 +73,6 @@ protected:
   ScMemoryContext * context;
   std::unique_ptr<ScTemplateSearchResult> searchWithoutContentResult;
   ScAddrVector inputStructures;
+  ReplacementsUsingType replacementsUsingType;
 };
 }  // namespace inference
