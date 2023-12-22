@@ -10,8 +10,8 @@
 
 using namespace inference;
 
-TemplateSearcherAbstract::TemplateSearcherAbstract(ScMemoryContext * context)
-  : context(context)
+TemplateSearcherAbstract::TemplateSearcherAbstract(ScMemoryContext * context, ReplacementsUsingType replacementsUsingType)
+  : context(context), replacementsUsingType(replacementsUsingType)
 {
 }
 
