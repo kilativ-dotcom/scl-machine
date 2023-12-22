@@ -30,7 +30,8 @@ enum SolutionTreeType
 enum SearchType
 {
   SEARCH_IN_ALL_KB = 1,
-  SEARCH_IN_STRUCTURES = 2
+  SEARCH_IN_STRUCTURES = 2,
+  SEARCH_ONLY_ACCESS_EDGES_IN_STRUCTURES = 3
 };
 
 struct InferenceConfig
