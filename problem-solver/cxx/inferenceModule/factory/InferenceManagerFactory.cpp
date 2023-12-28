@@ -36,6 +36,7 @@ std::unique_ptr<InferenceManagerAbstract> InferenceManagerFactory::constructDire
   std::shared_ptr<TemplateManagerAbstract> templateManager = std::make_shared<TemplateManagerFixedArguments>(context);
   templateManager->setReplacementsUsingType(inferenceFlowConfig.replacementsUsingType);
   templateManager->setGenerationType(inferenceFlowConfig.generationType);
+  templateManager->setFillingType(inferenceFlowConfig.fillingType);
   strategyAll->setTemplateManager(templateManager);
 
   std::shared_ptr<TemplateSearcherAbstract> templateSearcher;
@@ -51,6 +52,7 @@ std::unique_ptr<InferenceManagerAbstract> InferenceManagerFactory::constructDire
   {
     templateSearcher = std::make_shared<TemplateSearcherOnlyAccessEdgesInStructures>(context);
     templateSearcher->setReplacementsUsingType(inferenceFlowConfig.replacementsUsingType);
+    templateSearcher->setOutputStructureFillingType(inferenceFlowConfig.fillingType);
   }
   strategyAll->setTemplateSearcher(templateSearcher);
 
@@ -93,6 +95,7 @@ std::unique_ptr<InferenceManagerAbstract> InferenceManagerFactory::constructDire
   {
     templateSearcher = std::make_shared<TemplateSearcherOnlyAccessEdgesInStructures>(context);
     templateSearcher->setReplacementsUsingType(inferenceFlowConfig.replacementsUsingType);
+    templateSearcher->setOutputStructureFillingType(inferenceFlowConfig.fillingType);
   }
   strategyTarget->setTemplateSearcher(templateSearcher);
 

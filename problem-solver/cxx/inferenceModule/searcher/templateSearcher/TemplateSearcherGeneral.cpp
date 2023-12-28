@@ -39,7 +39,8 @@ void TemplateSearcherGeneral::searchTemplate(
     {
       context->HelperSmartSearchTemplate(
           searchTemplate,
-          [&templateParams, &result, &variables, this](ScTemplateSearchResultItem const & item) -> ScTemplateSearchRequest {
+          [&templateParams, &result, &variables, this](
+              ScTemplateSearchResultItem const & item) -> ScTemplateSearchRequest {
             // Add search result items to the result Replacements
             for (ScAddr const & variable : variables)
             {

@@ -148,6 +148,21 @@ LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
         }
       }
     }
+
+    if (templateManager->getFillingType() == SEARCHED_AND_GENERATED && !searchResult.empty())
+    {
+      for (const auto & elements : searchResult)
+      {
+        for (const auto & element : elements.second)
+        {
+          if (outputStructureElements.find(element) == outputStructureElements.cend())
+          {
+            context->CreateEdge(ScType::EdgeAccessConstPosPerm, outputStructure, element);
+            outputStructureElements.insert(element);
+          }
+        }
+      }
+    }
   }
 
   SC_LOG_DEBUG(
