@@ -24,7 +24,10 @@ namespace inference
 class TemplateSearcherAbstract
 {
 public:
-  explicit TemplateSearcherAbstract(ScMemoryContext * context, ReplacementsUsingType replacementsUsingType = ReplacementsUsingType::REPLACEMENTS_FIRST);
+  explicit TemplateSearcherAbstract(
+      ScMemoryContext * context,
+      ReplacementsUsingType replacementsUsingType = ReplacementsUsingType::REPLACEMENTS_FIRST,
+      OutputStructureFillingType outputStructureFillingType = OutputStructureFillingType::GENERATED_ONLY);
 
   virtual ~TemplateSearcherAbstract() = default;
 
@@ -56,9 +59,19 @@ public:
     replacementsUsingType = otherReplacementsUsingType;
   }
 
+  void setOutputStructureFillingType(OutputStructureFillingType const otherOutputStructureFillingType)
+  {
+    outputStructureFillingType = otherOutputStructureFillingType;
+  }
+
   ReplacementsUsingType getReplacementsUsingType() const
   {
     return replacementsUsingType;
+  }
+
+  OutputStructureFillingType getOutputStructureFillingType() const
+  {
+    return outputStructureFillingType;
   }
 
 protected:
@@ -74,5 +87,6 @@ protected:
   std::unique_ptr<ScTemplateSearchResult> searchWithoutContentResult;
   ScAddrVector inputStructures;
   ReplacementsUsingType replacementsUsingType;
+  OutputStructureFillingType outputStructureFillingType;
 };
 }  // namespace inference

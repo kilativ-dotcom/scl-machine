@@ -48,7 +48,8 @@ void TemplateSearcherInStructures::searchTemplate(
     {
       context->HelperSmartSearchTemplate(
           searchTemplate,
-          [templateParams, &result, &variables, this](ScTemplateSearchResultItem const & item) -> ScTemplateSearchRequest {
+          [templateParams, &result, &variables, this](
+              ScTemplateSearchResultItem const & item) -> ScTemplateSearchRequest {
             // Add search result item to the answer container
             for (ScAddr const & variable : variables)
             {

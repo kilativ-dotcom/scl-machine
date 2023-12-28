@@ -34,12 +34,19 @@ enum SearchType
   SEARCH_ONLY_ACCESS_EDGES_IN_STRUCTURES = 3
 };
 
+enum OutputStructureFillingType
+{
+  GENERATED_ONLY = 1,
+  SEARCHED_AND_GENERATED = 2
+};
+
 struct InferenceConfig
 {
   GenerationType generationType;
   ReplacementsUsingType replacementsUsingType;
   SolutionTreeType solutionTreeType;
   SearchType searchType;
+  OutputStructureFillingType fillingType;
 };
 
 struct InferenceParams
