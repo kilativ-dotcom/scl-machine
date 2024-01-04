@@ -30,6 +30,7 @@ public:
 private:
   static ScAddrHashSet getCommonKeys(ScAddrHashSet const & first, ScAddrHashSet const & second);
   static Replacements copyReplacements(Replacements const & replacements);
+  static void removeDuplicateColumns(Replacements & replacements);
 };
 
 }  // namespace inference
