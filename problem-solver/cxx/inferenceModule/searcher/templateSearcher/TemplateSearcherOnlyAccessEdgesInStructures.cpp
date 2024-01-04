@@ -52,8 +52,8 @@ void TemplateSearcherOnlyAccessEdgesInStructures::searchTemplate(
             }
             if (outputStructureFillingType == OutputStructureFillingType::SEARCHED_AND_GENERATED)
             {
-              for (const auto & node : item)
-                result[to_string(node.Hash())].push_back(node);
+              for (auto const & replacement : item.GetReplacements())
+                result[replacement.first].push_back(item[replacement.second]);
             }
             if (replacementsUsingType == ReplacementsUsingType::REPLACEMENTS_FIRST)
               return ScTemplateSearchRequest::STOP;
