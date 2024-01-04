@@ -131,7 +131,6 @@ LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
                     << context->HelperGetSystemIdtf(variable));
           temporalReplacements[variable] = replacementsVector;
         }
-        SC_LOG_DEBUG("about to unite");
         result.replacements = ReplacementsUtils::uniteReplacements(result.replacements, temporalReplacements);
       }
 
