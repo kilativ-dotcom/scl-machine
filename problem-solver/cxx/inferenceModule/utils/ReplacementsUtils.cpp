@@ -94,6 +94,7 @@ Replacements ReplacementsUtils::uniteReplacements(Replacements const & first, Re
       ++resultSize;
     }
   }
+  removeDuplicateColumns(result);
   return result;
 }
 
@@ -154,5 +155,42 @@ vector<ScTemplateParams> ReplacementsUtils::getReplacementsToScTemplateParams(
 size_t ReplacementsUtils::getColumnsAmount(Replacements const & replacements)
 {
   return (replacements.empty() ? 0 : replacements.begin()->second.size());
+}
+
+void ReplacementsUtils::removeDuplicateColumns(Replacements & replacements)
+{
+  size_t columnsAmount = getColumnsAmount(replacements);
+  ScAddrHashSet keys;
+  getKeySet(replacements, keys);
+  if (keys.empty())
+    return;
+  std::unordered_map<ScAddr, ScAddr, ScAddrHashFunc<uint32_t>> column;
+  for (int columnNumber = 0; columnNumber < columnsAmount; ++columnNumber)
+  {
+    for (auto const & key : keys)
+      column[key] = replacements.find(key)->second[columnNumber];
+    for (int comparedColumnNumber = columnNumber + 1; comparedColumnNumber < columnsAmount; ++comparedColumnNumber)
+    {
+      bool columnIsUnique = false;
+      for (auto const & key : keys)
+      {
+        if (column[key] != replacements.find(key)->second[comparedColumnNumber])
+        {
+          columnIsUnique = true;
+          break;
+        }
+      }
+      if (!columnIsUnique)
+      {
+        for (auto const & key : keys)
+        {
+          ScAddrVector & replacementValues = replacements.find(key)->second;
+          replacementValues.erase(replacementValues.begin() + comparedColumnNumber);
+        }
+        columnsAmount--;
+        comparedColumnNumber--;
+      }
+    }
+  }
 }
 }  // namespace inference
