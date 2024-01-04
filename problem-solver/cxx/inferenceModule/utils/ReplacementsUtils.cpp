@@ -52,6 +52,7 @@ Replacements ReplacementsUtils::intersectReplacements(
       }
     }
   }
+  removeDuplicateColumns(result);
   return result;
 }
 
