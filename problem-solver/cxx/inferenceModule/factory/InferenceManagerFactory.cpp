@@ -51,9 +51,9 @@ std::unique_ptr<InferenceManagerAbstract> InferenceManagerFactory::constructDire
   else if (inferenceFlowConfig.searchType == SEARCH_ONLY_ACCESS_EDGES_IN_STRUCTURES)
   {
     templateSearcher = std::make_shared<TemplateSearcherOnlyAccessEdgesInStructures>(context);
-    templateSearcher->setReplacementsUsingType(inferenceFlowConfig.replacementsUsingType);
-    templateSearcher->setOutputStructureFillingType(inferenceFlowConfig.fillingType);
   }
+  templateSearcher->setReplacementsUsingType(inferenceFlowConfig.replacementsUsingType);
+  templateSearcher->setOutputStructureFillingType(inferenceFlowConfig.fillingType);
   strategyAll->setTemplateSearcher(templateSearcher);
 
   return strategyAll;
@@ -94,9 +94,9 @@ std::unique_ptr<InferenceManagerAbstract> InferenceManagerFactory::constructDire
   else if (inferenceFlowConfig.searchType == SEARCH_ONLY_ACCESS_EDGES_IN_STRUCTURES)
   {
     templateSearcher = std::make_shared<TemplateSearcherOnlyAccessEdgesInStructures>(context);
-    templateSearcher->setReplacementsUsingType(inferenceFlowConfig.replacementsUsingType);
-    templateSearcher->setOutputStructureFillingType(inferenceFlowConfig.fillingType);
   }
+  templateSearcher->setReplacementsUsingType(inferenceFlowConfig.replacementsUsingType);
+  templateSearcher->setOutputStructureFillingType(inferenceFlowConfig.fillingType);
   strategyTarget->setTemplateSearcher(templateSearcher);
 
   return strategyTarget;
