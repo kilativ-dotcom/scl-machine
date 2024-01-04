@@ -49,6 +49,7 @@ Replacements inference::ReplacementsUtils::intersectReplacements(
       }
     }
   }
+  removeDuplicateColumns(result);
   return result;
 }
 
