@@ -46,6 +46,8 @@ public:
 
   void getVariables(ScAddr const & formula, ScAddrHashSet & variables);
 
+  void getConstants(ScAddr const & formula, ScAddrHashSet & constants);
+
   bool isContentIdentical(
       ScTemplateSearchResultItem const & item,
       std::map<std::string, std::string> const & linksContentMap);
