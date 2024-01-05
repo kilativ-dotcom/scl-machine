@@ -19,7 +19,7 @@ TemplateSearcherOnlyAccessEdgesInStructures::TemplateSearcherOnlyAccessEdgesInSt
 void TemplateSearcherOnlyAccessEdgesInStructures::searchTemplate(
     ScAddr const & templateAddr,
     ScTemplateParams const & templateParams,
-    set<std::string> const & varNames,
+    ScAddrHashSet const & variables,
     Replacements & result)
 {
   searchWithoutContentResult = std::make_unique<ScTemplateSearchResult>();
@@ -35,25 +35,20 @@ void TemplateSearcherOnlyAccessEdgesInStructures::searchTemplate(
     {
       context->HelperSmartSearchTemplate(
           searchTemplate,
-          [templateParams, &result, &varNames, this](
+          [templateParams, &result, &variables, this](
               ScTemplateSearchResultItem const & item) -> ScTemplateSearchRequest {
             // Add search result item to the answer container
-            for (std::string const & varName : varNames)
+            for (ScAddr const & variable : variables)
             {
               ScAddr argument;
-              if (item.Has(varName))
+              if (item.Has(variable))
               {
-                result[varName].push_back(item[varName]);
+                result[variable].push_back(item[variable]);
               }
-              if (templateParams.Get(varName, argument))
+              if (templateParams.Get(variable, argument))
               {
-                result[varName].push_back(argument);
+                result[variable].push_back(argument);
               }
-            }
-            if (outputStructureFillingType == OutputStructureFillingType::SEARCHED_AND_GENERATED)
-            {
-              for (auto const & replacement : item.GetReplacements())
-                result[replacement.first].push_back(item[replacement.second]);
             }
             if (replacementsUsingType == ReplacementsUsingType::REPLACEMENTS_FIRST)
               return ScTemplateSearchRequest::STOP;
