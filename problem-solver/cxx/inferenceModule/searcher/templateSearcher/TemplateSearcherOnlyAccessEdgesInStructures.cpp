@@ -45,7 +45,7 @@ void TemplateSearcherOnlyAccessEdgesInStructures::searchTemplate(
               {
                 result[variable].push_back(item[variable]);
               }
-              if (templateParams.Get(variable, argument))
+              else if (templateParams.Get(variable, argument))
               {
                 result[variable].push_back(argument);
               }
