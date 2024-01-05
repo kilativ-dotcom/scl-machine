@@ -214,17 +214,23 @@ TEST_F(TemplateSearchManagerTest, SearchWithExistedConstructionsTest)
   initialize();
 
   ScAddr searchTemplateAddr = context.HelperFindBySystemIdtf(TEST_SEARCH_TEMPLATE_ID);
-  ScAddrVector templateContent = utils::IteratorUtils::getAllWithType(&context, searchTemplateAddr, ScType::Unknown);
+  ScAddrVector templateVars = utils::IteratorUtils::getAllWithType(&context, searchTemplateAddr, ScType::Var);
   ScAddr structure_1 = context.HelperFindBySystemIdtf(structure1);
   ScAddr structure_2 = context.HelperFindBySystemIdtf(structure2);
   ScAddr structure_3 = context.HelperFindBySystemIdtf(structure3);
 
-  inference::TemplateSearcherOnlyAccessEdgesInStructures templateSearcher(
-      &context, {structure_1, structure_2, structure_3});
-  templateSearcher.setOutputStructureFillingType(SEARCHED_AND_GENERATED);
+  std::unique_ptr<inference::TemplateSearcherAbstract> templateSearcher =
+      std::make_unique<inference::TemplateSearcherOnlyAccessEdgesInStructures>(
+        &context);
+  templateSearcher->setInputStructures({structure_1, structure_2, structure_3});
+  templateSearcher->setOutputStructureFillingType(SEARCHED_AND_GENERATED);
   Replacements searchResults;
-  templateSearcher.searchTemplate(searchTemplateAddr, {}, {}, searchResults);
+  templateSearcher->searchTemplate(
+      searchTemplateAddr,
+      std::vector<ScTemplateParams>{{}},
+      {templateVars.cbegin(), templateVars.cend()},
+      searchResults);
 
-  EXPECT_EQ(searchResults.size(), templateContent.size());
+  EXPECT_EQ(searchResults.size(), templateVars.size());
 }
 }  // namespace inferenceTest
