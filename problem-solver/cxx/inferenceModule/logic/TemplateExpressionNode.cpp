@@ -83,9 +83,11 @@ LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
     return result;
   }
 
-  ScAddrHashSet variables;
-  ReplacementsUtils::getKeySet(replacements, variables);
-  templateSearcher->getVariables(formula, variables);
+  ScAddrHashSet allVariables;
+  ReplacementsUtils::getKeySet(replacements, allVariables);
+  ScAddrHashSet formulaVariables;
+  templateSearcher->getVariables(formula, formulaVariables);
+  allVariables.insert(formulaVariables.cbegin(), formulaVariables.cend());
 
   size_t count = 0;
   Replacements searchResult;
@@ -96,7 +98,7 @@ LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
 
     if (templateManager->getGenerationType() == GENERATE_UNIQUE_FORMULAS)
     {
-      templateSearcher->searchTemplate(formula, scTemplateParams, variables, searchResult);
+      templateSearcher->searchTemplate(formula, scTemplateParams, allVariables, searchResult);
     }
 
     if (templateManager->getGenerationType() != GENERATE_UNIQUE_FORMULAS || searchResult.empty())
@@ -112,7 +114,7 @@ LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
         result.isGenerated = true;
         result.value = true;
         Replacements temporalReplacements;
-        for (ScAddr const & variable : variables)
+        for (ScAddr const & variable : allVariables)
         {
           ScAddrVector replacementsVector;
           ScAddr outAddr;
@@ -148,17 +150,30 @@ LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
       }
     }
 
-    if (templateManager->getFillingType() == SEARCHED_AND_GENERATED && !searchResult.empty())
+    if (outputStructure.IsValid() && templateManager->getFillingType() == SEARCHED_AND_GENERATED)
     {
-      for (const auto & elements : searchResult)
+      for (auto const & elements : searchResult)
       {
-        for (const auto & element : elements.second)
+        if (formulaVariables.find(elements.first) != formulaVariables.cend())
         {
-          if (outputStructureElements.find(element) == outputStructureElements.cend())
+          for (auto const & element : elements.second)
           {
-            context->CreateEdge(ScType::EdgeAccessConstPosPerm, outputStructure, element);
-            outputStructureElements.insert(element);
+            if (outputStructureElements.find(element) == outputStructureElements.cend())
+            {
+              context->CreateEdge(ScType::EdgeAccessConstPosPerm, outputStructure, element);
+              outputStructureElements.insert(element);
+            }
           }
+        }
+      }
+      ScAddrHashSet formulaConstants;
+      templateSearcher->getConstants(formula, formulaConstants);
+      for (auto const & formulaConstant : formulaConstants)
+      {
+        if (outputStructureElements.find(formulaConstant) == outputStructureElements.cend())
+        {
+          context->CreateEdge(ScType::EdgeAccessConstPosPerm, outputStructure, formulaConstant);
+          outputStructureElements.insert(formulaConstant);
         }
       }
     }

@@ -69,6 +69,14 @@ void TemplateSearcherAbstract::getVariables(ScAddr const & formula, ScAddrHashSe
     variables.insert(formulaVariablesIterator->Get(2));
 }
 
+void TemplateSearcherAbstract::getConstants(ScAddr const & formula, ScAddrHashSet & constants)
+{
+  ScIterator3Ptr const & formulaConstantsIterator =
+      context->Iterator3(formula, ScType::EdgeAccessConstPosPerm, ScType::Const);
+  while (formulaConstantsIterator->Next())
+    constants.insert(formulaConstantsIterator->Get(2));
+}
+
 bool TemplateSearcherAbstract::isContentIdentical(
     ScTemplateSearchResultItem const & item,
     std::map<std::string, std::string> const & linksContentMap)
