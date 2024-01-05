@@ -158,11 +158,11 @@ size_t inference::ReplacementsUtils::getColumnsAmount(Replacements const & repla
 void inference::ReplacementsUtils::removeDuplicateColumns(Replacements & replacements)
 {
   size_t columnsAmount = getColumnsAmount(replacements);
-  std::set<std::string> keys;
+  ScAddrHashSet keys;
   getKeySet(replacements, keys);
   if (keys.empty())
     return;
-  std::map<std::string, ScAddr> column;
+  std::unordered_map<ScAddr, ScAddr, ScAddrHashFunc<uint32_t>> column;
   for (int columnNumber = 0; columnNumber < columnsAmount; ++columnNumber)
   {
     for (auto const & key : keys)
