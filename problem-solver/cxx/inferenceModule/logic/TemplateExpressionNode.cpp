@@ -91,6 +91,7 @@ LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
 
   size_t count = 0;
   Replacements searchResult;
+  Replacements temporalReplacements;
   for (ScTemplateParams const & scTemplateParams : paramsVector)
   {
     if (templateManager->getReplacementsUsingType() == REPLACEMENTS_FIRST && result.isGenerated)
@@ -113,7 +114,6 @@ LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
         ++count;
         result.isGenerated = true;
         result.value = true;
-        Replacements temporalReplacements;
         for (ScAddr const & variable : allVariables)
         {
           ScAddrVector replacementsVector;
@@ -123,17 +123,15 @@ LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
           ScAddr outResult;
           bool const paramsHaveVar = scTemplateParams.Get(variable, outResult);
           if (generationHasVar)
-            replacementsVector.push_back(generationResult[variable]);
+            temporalReplacements[variable].push_back(generationResult[variable]);
           else if (paramsHaveVar)
-            replacementsVector.push_back(outResult);
+            temporalReplacements[variable].push_back(outResult);
           else
             SC_THROW_EXCEPTION(
                 utils::ExceptionInvalidState,
                 "generation result and template params do not have replacement for "
                     << context->HelperGetSystemIdtf(variable));
-          temporalReplacements[variable] = replacementsVector;
         }
-        result.replacements = ReplacementsUtils::uniteReplacements(result.replacements, temporalReplacements);
       }
 
       if (outputStructure.IsValid())
@@ -150,7 +148,8 @@ LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
       }
     }
 
-    if (outputStructure.IsValid() && templateManager->getFillingType() == SEARCHED_AND_GENERATED)
+    if (outputStructure.IsValid() && templateManager->getFillingType() == SEARCHED_AND_GENERATED &&
+        searchResult.empty() == SC_FALSE)
     {
       for (auto const & elements : searchResult)
       {
@@ -178,6 +177,7 @@ LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
       }
     }
   }
+  result.replacements = temporalReplacements;
 
   SC_LOG_DEBUG(
       "Atomic logical formula " << context->HelperGetSystemIdtf(formula) << " is generated " << count << " times");
