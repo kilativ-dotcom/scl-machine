@@ -46,4 +46,5 @@ private:
 
   ScAddr outputStructure;
   ScAddr formula;
+  void generateByReplacements(Replacements const & replacements, LogicFormulaResult & result, size_t & count);
 };
