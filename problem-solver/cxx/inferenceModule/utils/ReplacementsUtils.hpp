@@ -13,6 +13,7 @@
 #include <sc-memory/sc_template.hpp>
 
 using Replacements = std::unordered_map<ScAddr, ScAddrVector, ScAddrHashFunc<uint32_t>>;
+using ReplacementsHashes = std::unordered_map<size_t, std::vector<size_t>>;
 using ScAddrHashSet = std::unordered_set<ScAddr, ScAddrHashFunc<uint32_t>>;
 using namespace std;
 
@@ -23,6 +24,7 @@ class ReplacementsUtils
 public:
   static Replacements intersectReplacements(Replacements const & first, Replacements const & second);
   static Replacements uniteReplacements(Replacements const & first, Replacements const & second);
+  static Replacements subtractReplacements(Replacements const & first, Replacements const & second);
   static vector<ScTemplateParams> getReplacementsToScTemplateParams(Replacements const & replacements);
   static size_t getColumnsAmount(Replacements const & replacements);
   static void getKeySet(Replacements const & map, ScAddrHashSet & keySet);
@@ -31,6 +33,9 @@ private:
   static ScAddrHashSet getCommonKeys(ScAddrHashSet const & first, ScAddrHashSet const & second);
   static Replacements copyReplacements(Replacements const & replacements);
   static void removeDuplicateColumns(Replacements & replacements);
+  static ReplacementsHashes calculateHashesForCommonKeys(
+      Replacements const & replacements,
+      ScAddrHashSet const & commonKeys);
 };
 
 }  // namespace inference

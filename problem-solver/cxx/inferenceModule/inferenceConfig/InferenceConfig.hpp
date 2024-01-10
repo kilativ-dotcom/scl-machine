@@ -40,6 +40,12 @@ enum OutputStructureFillingType
   SEARCHED_AND_GENERATED = 2
 };
 
+enum AtomicLogicalFormulaSearchBeforeGenerationType
+{
+  SEARCH_WITHOUT_REPLACEMENTS = 1,
+  SEARCH_WITH_REPLACEMENTS = 2
+};
+
 struct InferenceConfig
 {
   GenerationType generationType;
@@ -47,6 +53,7 @@ struct InferenceConfig
   SolutionTreeType solutionTreeType;
   SearchType searchType;
   OutputStructureFillingType fillingType;
+  AtomicLogicalFormulaSearchBeforeGenerationType atomicLogicalFormulaSearchBeforeGenerationType;
 };
 
 struct InferenceParams
