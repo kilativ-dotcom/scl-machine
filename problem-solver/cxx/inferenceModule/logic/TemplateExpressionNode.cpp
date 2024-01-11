@@ -76,27 +76,10 @@ LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
 {
   LogicFormulaResult result;
 
-  for (auto const & temporalReplacement : replacements)
-  {
-    SC_LOG_INFO_COLOR("var: " << temporalReplacement.first.Hash() << "(" << context->HelperGetSystemIdtf(temporalReplacement.first) << ")", ScConsole::Color::Green);
-    for (auto const & nodes : temporalReplacement.second)
-    {
-      SC_LOG_INFO_COLOR("    has replacement " << nodes.Hash() << "(" << context->HelperGetSystemIdtf(nodes) << ")", ScConsole::Color::Green);
-    }
-  }
-  SC_LOG_INFO_COLOR("======================", ScConsole::Color::Red);
   Replacements fakeReplacements;
   fakeReplacements[context->CreateNode(ScType::NodeVar)].push_back(context->CreateNode(ScType::NodeConstClass));
   LogicFormulaResult const & resultWithoutReplacements = find(fakeReplacements);
-  for (auto const & temporalReplacement : resultWithoutReplacements.replacements)
-  {
-    SC_LOG_INFO_COLOR("var: " << temporalReplacement.first.Hash() << "(" << context->HelperGetSystemIdtf(temporalReplacement.first) << ")", ScConsole::Color::Green);
-    for (auto const & nodes : temporalReplacement.second)
-    {
-      SC_LOG_INFO_COLOR("    has replacement " << nodes.Hash() << "(" << context->HelperGetSystemIdtf(nodes) << ")", ScConsole::Color::Green);
-    }
-  }
-  SC_LOG_INFO_COLOR("======================", ScConsole::Color::Red);
+
   Replacements const & intersection =
       ReplacementsUtils::intersectReplacements(replacements, resultWithoutReplacements.replacements);
   Replacements const & difference =
@@ -142,113 +125,7 @@ LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
   else
     generateByReplacements(intersection, result, count);
 
-  //  // Convert replacements to templateParams to generate by them
-//  std::vector<ScTemplateParams> paramsVector = ReplacementsUtils::getReplacementsToScTemplateParams(replacements);
-//  if (paramsVector.empty())
-//  {
-//    SC_LOG_DEBUG("Atomic logical formula " << context->HelperGetSystemIdtf(formula) << " is not generated");
-//    return result;
-//  }
-//
-//  size_t count = 0;
-//  Replacements searchResult;
-//  Replacements temporalReplacements;
-//  for (ScTemplateParams const & scTemplateParams : paramsVector)
-//  {
-//    if (templateManager->getReplacementsUsingType() == REPLACEMENTS_FIRST && result.isGenerated)
-//      break;
-//
-//    if (templateManager->getGenerationType() == GENERATE_UNIQUE_FORMULAS)
-//    {
-//      SC_LOG_INFO("searching");
-//      templateSearcher->searchTemplate(formula, scTemplateParams, allVariables, searchResult);
-//    }
-//
-//    if (templateManager->getGenerationType() != GENERATE_UNIQUE_FORMULAS || searchResult.empty())
-//    {
-//      ScTemplate generatedTemplate;
-//      context->HelperBuildTemplate(generatedTemplate, formula, scTemplateParams);
-//
-//      ScTemplateGenResult generationResult;
-//      ScTemplate::Result const & genTemplate = context->HelperGenTemplate(generatedTemplate, generationResult);
-//      if (genTemplate)
-//      {
-//        ++count;
-//        result.isGenerated = true;
-//        result.value = true;
-//        for (ScAddr const & variable : allVariables)
-//        {
-//          ScAddrVector replacementsVector;
-//          ScAddr outAddr;
-//          generationResult.Get(variable, outAddr);
-//          bool const generationHasVar = outAddr.IsValid();
-//          ScAddr outResult;
-//          bool const paramsHaveVar = scTemplateParams.Get(variable, outResult);
-//          if (generationHasVar)
-//            temporalReplacements[variable].push_back(generationResult[variable]);
-//          else if (paramsHaveVar)
-//            temporalReplacements[variable].push_back(outResult);
-//          else
-//            SC_THROW_EXCEPTION(
-//                utils::ExceptionInvalidState,
-//                "generation result and template params do not have replacement for "
-//                    << context->HelperGetSystemIdtf(variable));
-//        }
-//      }
-//
-//      if (outputStructure.IsValid())
-//      {
-//        for (size_t i = 0; i < generationResult.Size(); ++i)
-//        {
-//          ScAddr const & generatedElement = generationResult[i];
-//          if (outputStructureElements.find(generatedElement) == outputStructureElements.cend())
-//          {
-//            context->CreateEdge(ScType::EdgeAccessConstPosPerm, outputStructure, generatedElement);
-//            outputStructureElements.insert(generatedElement);
-//          }
-//        }
-//      }
-//    }
-//
-//    if (outputStructure.IsValid() && templateManager->getFillingType() == SEARCHED_AND_GENERATED &&
-//        searchResult.empty() == SC_FALSE)
-//    {
-//      for (auto const & elements : searchResult)
-//      {
-//        if (formulaVariables.find(elements.first) != formulaVariables.cend())
-//        {
-//          for (auto const & element : elements.second)
-//          {
-//            if (outputStructureElements.find(element) == outputStructureElements.cend())
-//            {
-//              context->CreateEdge(ScType::EdgeAccessConstPosPerm, outputStructure, element);
-//              outputStructureElements.insert(element);
-//            }
-//          }
-//        }
-//      }
-//      ScAddrHashSet formulaConstants;
-//      templateSearcher->getConstants(formula, formulaConstants);
-//      for (auto const & formulaConstant : formulaConstants)
-//      {
-//        if (outputStructureElements.find(formulaConstant) == outputStructureElements.cend())
-//        {
-//          context->CreateEdge(ScType::EdgeAccessConstPosPerm, outputStructure, formulaConstant);
-//          outputStructureElements.insert(formulaConstant);
-//        }
-//      }
-//    }
-//  }
   result.replacements = intersection;
-//
-//  for (auto const & temporalReplacement : temporalReplacements)
-//  {
-//    SC_LOG_INFO_COLOR("var: " << temporalReplacement.first.Hash() << "(" << context->HelperGetSystemIdtf(temporalReplacement.first) << ")", ScConsole::Color::Green);
-//    for (auto const & nodes : temporalReplacement.second)
-//    {
-//      SC_LOG_INFO_COLOR("    has replacement " << nodes.Hash() << "(" << context->HelperGetSystemIdtf(nodes) << ")", ScConsole::Color::Green);
-//    }
-//  }
 
   SC_LOG_DEBUG(
       "Atomic logical formula " << context->HelperGetSystemIdtf(formula) << " is generated " << count << " times");
@@ -260,59 +137,47 @@ void TemplateExpressionNode::generateByReplacements(
     LogicFormulaResult & result,
     size_t & count)
 {
-  try
+  vector<ScTemplateParams> const & paramsVector = ReplacementsUtils::getReplacementsToScTemplateParams(replacements);
+  for (auto const & params : paramsVector)
   {
-    vector<ScTemplateParams> const & paramsVector = ReplacementsUtils::getReplacementsToScTemplateParams(replacements);
-    for (auto const & params : paramsVector)
+    ScTemplate generatedTemplate;
+    context->HelperBuildTemplate(generatedTemplate, formula, params);
+
+    ScTemplateGenResult generationResult;
+    ScTemplate::Result const & genTemplate = context->HelperGenTemplate(generatedTemplate, generationResult);
+    if (genTemplate)
     {
-      for (const auto & item : params.GetAll())
-      {
-        SC_LOG_INFO("item is " << item.first << "==>" << item.second.Hash() << (context->GetElementType(item.second).IsVar() ? "var" : "const"));
-      }
-      SC_LOG_INFO("");
-      ScTemplate generatedTemplate;
-      context->HelperBuildTemplate(generatedTemplate, formula, params);
-
-      ScTemplateGenResult generationResult;
-      ScTemplate::Result const & genTemplate = context->HelperGenTemplate(generatedTemplate, generationResult);
-      if (genTemplate)
-      {
-        ++count;
-        result.isGenerated = true;
-        result.value = true;
-      }
-
-      if (outputStructure.IsValid())
-      {
-        for (size_t i = 0; i < generationResult.Size(); ++i)
-        {
-          ScAddr const & generatedElement = generationResult[i];
-          if (outputStructureElements.find(generatedElement) == outputStructureElements.cend())
-          {
-            context->CreateEdge(ScType::EdgeAccessConstPosPerm, outputStructure, generatedElement);
-            outputStructureElements.insert(generatedElement);
-          }
-        }
-      }
-      if (templateManager->getReplacementsUsingType() == REPLACEMENTS_FIRST && result.isGenerated)
-        break;
+      ++count;
+      result.isGenerated = true;
+      result.value = true;
     }
-    if (result.isGenerated)
+
+    if (outputStructure.IsValid())
     {
-      ScAddrHashSet formulaConstants;
-      templateSearcher->getConstants(formula, formulaConstants);
-      for (auto const & formulaConstant : formulaConstants)
+      for (size_t i = 0; i < generationResult.Size(); ++i)
       {
-        if (outputStructureElements.find(formulaConstant) == outputStructureElements.cend())
+        ScAddr const & generatedElement = generationResult[i];
+        if (outputStructureElements.find(generatedElement) == outputStructureElements.cend())
         {
-          context->CreateEdge(ScType::EdgeAccessConstPosPerm, outputStructure, formulaConstant);
-          outputStructureElements.insert(formulaConstant);
+          context->CreateEdge(ScType::EdgeAccessConstPosPerm, outputStructure, generatedElement);
+          outputStructureElements.insert(generatedElement);
         }
       }
     }
+    if (templateManager->getReplacementsUsingType() == REPLACEMENTS_FIRST && result.isGenerated)
+      break;
   }
-  catch(utils::ScException const & exception)
+  if (result.isGenerated)
   {
-    SC_LOG_ERROR("exceptoiion: " << exception.Description());
+    ScAddrHashSet formulaConstants;
+    templateSearcher->getConstants(formula, formulaConstants);
+    for (auto const & formulaConstant : formulaConstants)
+    {
+      if (outputStructureElements.find(formulaConstant) == outputStructureElements.cend())
+      {
+        context->CreateEdge(ScType::EdgeAccessConstPosPerm, outputStructure, formulaConstant);
+        outputStructureElements.insert(formulaConstant);
+      }
+    }
   }
 }

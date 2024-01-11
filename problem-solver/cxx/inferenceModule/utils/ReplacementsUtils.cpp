@@ -11,7 +11,9 @@ Replacements inference::ReplacementsUtils::intersectReplacements(
     Replacements const & first,
     Replacements const & second)
 {
-  SC_LOG_INFO("intersecting " << first.size() << "x" << getColumnsAmount(first) << " and " << second.size() << "x" << getColumnsAmount(second));
+  SC_LOG_INFO(
+      "intersecting " << first.size() << "x" << getColumnsAmount(first) << " and " << second.size() << "x"
+                      << getColumnsAmount(second));
   Replacements result;
   std::vector<std::pair<size_t, size_t>> firstSecondPairs;
   ScAddrHashSet firstKeys;
@@ -36,8 +38,6 @@ Replacements inference::ReplacementsUtils::intersectReplacements(
     auto const & secondHashPairIterator = secondHashes.find(firstHashPair.first);
     if (secondHashPairIterator == secondHashes.cend())
       continue;
-    if (firstHashPair.second.size() > 1 || secondHashPairIterator->second.size() > 1)
-      SC_LOG_WARNING("intersectReplacements collision " << firstHashPair.second.size() << " and " << secondHashPairIterator->second.size());
     for (auto const & columnIndexInFirst : firstHashPair.second)
     {
       for (auto const & columnIndexInSecond : secondHashPairIterator->second)
@@ -82,7 +82,9 @@ Replacements inference::ReplacementsUtils::intersectReplacements(
 
 Replacements inference::ReplacementsUtils::subtractReplacements(Replacements const & first, Replacements const & second)
 {
-  SC_LOG_INFO("subtracting " << first.size() << "x" << getColumnsAmount(first) << " and " << second.size() << "x" << getColumnsAmount(second));
+  SC_LOG_INFO(
+      "subtracting " << first.size() << "x" << getColumnsAmount(first) << " and " << second.size() << "x"
+                     << getColumnsAmount(second));
   Replacements result;
   ScAddrHashSet firstKeys;
   getKeySet(first, firstKeys);
@@ -93,13 +95,13 @@ Replacements inference::ReplacementsUtils::subtractReplacements(Replacements con
   std::vector<size_t> firstColumns;
   firstColumns.reserve(firstAmountOfColumns);
 
-  if (firstAmountOfColumns == 0)
-    return copyReplacements(second);
-  if (secondAmountOfColumns == 0)
+  if (firstAmountOfColumns == 0 || secondAmountOfColumns == 0)
     return copyReplacements(first);
 
   ScAddrHashSet commonKeysSet = getCommonKeys(firstKeys, secondKeys);
 
+  if (commonKeysSet.empty())
+    return copyReplacements(first);
 
   ReplacementsHashes firstHashes = calculateHashesForCommonKeys(first, commonKeysSet);
   ReplacementsHashes secondHashes = calculateHashesForCommonKeys(second, commonKeysSet);
@@ -108,35 +110,28 @@ Replacements inference::ReplacementsUtils::subtractReplacements(Replacements con
     auto const & secondHashPairIterator = secondHashes.find(firstHashPair.first);
     if (secondHashPairIterator == secondHashes.cend())
     {
-      for (auto const & column : firstHashPair.second)
-      {
-        firstColumns.push_back(column);
-      }
+      firstColumns.insert(firstColumns.end(), firstHashPair.second.cbegin(), firstHashPair.second.cend());
       continue;
     }
-    if (firstHashPair.second.size() > 1 || secondHashPairIterator->second.size() > 1)
-      SC_LOG_WARNING("subtractReplacements collision " << firstHashPair.second.size() << " and " << secondHashPairIterator->second.size());
     for (auto const & columnIndexInFirst : firstHashPair.second)
     {
-      bool commonPartsAreDifferent = false;
+      bool hasPairWithSimilarValues = false;
       for (auto const & columnIndexInSecond : secondHashPairIterator->second)
       {
-        bool commonPartIsIdentical = true;
+        bool hasDifferentValuesForAnyKey = false;
         for (ScAddr const & commonKey : commonKeysSet)
         {
           if (first.find(commonKey)->second[columnIndexInFirst] != second.find(commonKey)->second[columnIndexInSecond])
           {
-            commonPartIsIdentical = false;
+            hasDifferentValuesForAnyKey = true;
             break;
           }
         }
-        if (!commonPartIsIdentical)
-        {
-          commonPartsAreDifferent = true;
+        hasPairWithSimilarValues = !hasDifferentValuesForAnyKey;
+        if (hasPairWithSimilarValues)
           break;
-        }
       }
-      if (commonPartsAreDifferent)
+      if (!hasPairWithSimilarValues)
         firstColumns.push_back(columnIndexInFirst);
     }
   }
@@ -270,7 +265,6 @@ void inference::ReplacementsUtils::removeDuplicateColumns(Replacements & replace
     auto const & columnsForHash = replacementsHash.second;
     if (columnsForHash.size() > 1)
     {
-      SC_LOG_INFO("removeDuplicateColumns collision " << columnsForHash.size());
       for (size_t firstColumnIndex = 0; firstColumnIndex < columnsForHash.size(); ++firstColumnIndex)
       {
         for (auto const & key : keys)
@@ -288,7 +282,6 @@ void inference::ReplacementsUtils::removeDuplicateColumns(Replacements & replace
           }
           if (!columnIsUnique)
           {
-            SC_LOG_INFO("    remove");
             for (auto const & key : keys)
             {
               ScAddrVector & replacementValues = replacements.find(key)->second;
@@ -296,8 +289,6 @@ void inference::ReplacementsUtils::removeDuplicateColumns(Replacements & replace
             }
             comparedColumnIndex--;
           }
-          else
-            SC_LOG_INFO("    fake");
         }
       }
     }
