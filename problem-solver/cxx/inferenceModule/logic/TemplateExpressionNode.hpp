@@ -41,10 +41,17 @@ private:
   ScMemoryContext * context;
 
   std::shared_ptr<TemplateSearcherAbstract> templateSearcher;
+  std::unique_ptr<TemplateSearcherAbstract> templateSearcherInKb;
   std::shared_ptr<TemplateManagerAbstract> templateManager;
   std::shared_ptr<SolutionTreeManagerAbstract> solutionTreeManager;
 
   ScAddr outputStructure;
   ScAddr formula;
-  void generateByReplacements(Replacements const & replacements, LogicFormulaResult & result, size_t & count);
+  void generateByReplacements(
+      Replacements const & replacements,
+      LogicFormulaResult & result,
+      size_t & count,
+      ScAddrHashSet const & variables);
+
+  LogicFormulaResult findInKb(Replacements const & replacements) const;
 };
