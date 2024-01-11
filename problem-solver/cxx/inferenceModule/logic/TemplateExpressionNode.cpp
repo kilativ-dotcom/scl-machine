@@ -34,13 +34,16 @@ void TemplateExpressionNode::compute(LogicFormulaResult & result) const
   // Template params should be created only if argument vector is not empty. Else search with any possible replacements
   if (!argumentVector.empty())
   {
+    SC_LOG_INFO("TemplateExpressionNode: compute for not empty arguments");
     std::vector<ScTemplateParams> const & templateParamsVector = templateManager->createTemplateParams(formula);
     templateSearcher->searchTemplate(formula, templateParamsVector, variables, replacements);
   }
   else
   {
+    SC_LOG_INFO("TemplateExpressionNode: compute for empty arguments");
     templateSearcher->searchTemplate(formula, ScTemplateParams(), variables, replacements);
   }
+  SC_LOG_INFO("TemplateExpressionNode: compute finished");
 
   result.replacements = replacements;
   result.value = !result.replacements.empty();
@@ -56,7 +59,9 @@ LogicFormulaResult TemplateExpressionNode::find(Replacements & replacements) con
   Replacements resultReplacements;
   ScAddrHashSet variables;
   templateSearcher->getVariables(formula, variables);
+  SC_LOG_INFO("TemplateExpressionNode: call search for " << paramsVector.size() << " params");
   templateSearcher->searchTemplate(formula, paramsVector, variables, resultReplacements);
+  SC_LOG_INFO("TemplateExpressionNode: search finished");
   result.replacements = resultReplacements;
   result.value = !result.replacements.empty();
 
@@ -82,8 +87,6 @@ LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
 
   Replacements const & intersection =
       ReplacementsUtils::intersectReplacements(replacements, resultWithoutReplacements.replacements);
-  Replacements const & difference =
-      ReplacementsUtils::subtractReplacements(replacements, resultWithoutReplacements.replacements);
   
   
   ScAddrHashSet allVariables;
@@ -121,7 +124,11 @@ LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
 
   size_t count = 0;
   if (templateManager->getGenerationType() == GENERATE_UNIQUE_FORMULAS)
+  {
+    Replacements const & difference =
+        ReplacementsUtils::subtractReplacements(replacements, resultWithoutReplacements.replacements);
     generateByReplacements(difference, result, count);
+  }
   else
     generateByReplacements(intersection, result, count);
 
