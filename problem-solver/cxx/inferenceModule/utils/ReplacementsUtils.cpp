@@ -269,7 +269,8 @@ void inference::ReplacementsUtils::removeDuplicateColumns(Replacements & replace
       {
         for (auto const & key : keys)
           column[key] = replacements.find(key)->second[columnsForHash[firstColumnIndex]];
-        for (size_t comparedColumnIndex = firstColumnIndex + 1; comparedColumnIndex < columnsForHash.size(); ++comparedColumnIndex)
+        for (size_t comparedColumnIndex = firstColumnIndex + 1; comparedColumnIndex < columnsForHash.size();
+             ++comparedColumnIndex)
         {
           bool columnIsUnique = false;
           for (auto const & key : keys)
@@ -309,8 +310,21 @@ ReplacementsHashes inference::ReplacementsUtils::calculateHashesForCommonKeys(
     int primeInd = 0;
     size_t offsets = 0;
     for (auto const & commonKey : commonKeys)
-      offsets += replacements.find(commonKey)->second.at(columnNumber).GetRealAddr().offset * primes.at(primeInd++%primes.size());
+      offsets += replacements.find(commonKey)->second.at(columnNumber).GetRealAddr().offset *
+                 primes.at(primeInd++ % primes.size());
     replacementsHashes[offsets / commonKeysAmount].push_back(columnNumber);
   }
   return replacementsHashes;
+}
+
+Replacements inference::ReplacementsUtils::removeRows(Replacements const & replacements, ScAddrHashSet & keysToRemove)
+{
+  Replacements result;
+  for (auto const & replacement : replacements)
+  {
+    if (keysToRemove.count(replacement.first))
+      continue;
+    result[replacement.first].assign(replacement.second.cbegin(), replacement.second.cend());
+  }
+  return result;
 }

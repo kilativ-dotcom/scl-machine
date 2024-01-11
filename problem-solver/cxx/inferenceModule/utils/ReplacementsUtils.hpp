@@ -25,6 +25,7 @@ public:
   static Replacements intersectReplacements(Replacements const & first, Replacements const & second);
   static Replacements uniteReplacements(Replacements const & first, Replacements const & second);
   static Replacements subtractReplacements(Replacements const & first, Replacements const & second);
+  static Replacements removeRows(Replacements const & replacements, ScAddrHashSet & keysToRemove);
   static vector<ScTemplateParams> getReplacementsToScTemplateParams(Replacements const & replacements);
   static size_t getColumnsAmount(Replacements const & replacements);
   static void getKeySet(Replacements const & map, ScAddrHashSet & keySet);
