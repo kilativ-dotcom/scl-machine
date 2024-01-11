@@ -19,6 +19,9 @@ public:
       ScTemplateParams const & templateParams,
       ScAddrHashSet const & variables,
       Replacements & result) override;
+
+private:
+  std::unique_ptr<ScAddrHashSet> contentOfAllInputStructures;
 };
 
 }  // namespace inference
