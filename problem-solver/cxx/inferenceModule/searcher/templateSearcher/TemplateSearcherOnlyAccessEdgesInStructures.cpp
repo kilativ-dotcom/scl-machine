@@ -12,6 +12,7 @@ TemplateSearcherOnlyAccessEdgesInStructures::TemplateSearcherOnlyAccessEdgesInSt
     ScAddrVector const & otherInputStructures)
   : TemplateSearcherInStructures(context, otherInputStructures)
 {
+  this->contentOfAllInputStructures = std::make_unique<ScAddrHashSet>();
 }
 
 TemplateSearcherOnlyAccessEdgesInStructures::TemplateSearcherOnlyAccessEdgesInStructures(ScMemoryContext * context)
@@ -37,11 +38,16 @@ void TemplateSearcherOnlyAccessEdgesInStructures::searchTemplate(
     {
       int resultCounter = 0;
       int filterCounter = 0;
-      ScAddrHashSet contentOfAllInputStructures;
-      for (auto const & inputStructure : inputStructures)
+      if (this->contentOfAllInputStructures->empty())
       {
-        ScAddrVector const & edges = utils::IteratorUtils::getAllWithType(context, inputStructure, ScType::EdgeAccess);
-        contentOfAllInputStructures.insert(edges.cbegin(), edges.cend());
+        SC_LOG_INFO("start input processing");
+        for (auto const & inputStructure : inputStructures)
+        {
+          ScAddrVector const & edges =
+              utils::IteratorUtils::getAllWithType(context, inputStructure, ScType::EdgeAccess);
+          contentOfAllInputStructures->insert(edges.cbegin(), edges.cend());
+        }
+        SC_LOG_INFO("input processed(" << contentOfAllInputStructures->size() << ")");
       }
       context->HelperSmartSearchTemplate(
           searchTemplate,
@@ -68,12 +74,12 @@ void TemplateSearcherOnlyAccessEdgesInStructures::searchTemplate(
             else
               return ScTemplateSearchRequest::CONTINUE;
           },
-          [&contentOfAllInputStructures, &filterCounter, this](ScAddr const & item) -> bool {
+          [&filterCounter, this](ScAddr const & item) -> bool {
             filterCounter++;
             if (filterCounter % 100000 == 0)
               SC_LOG_INFO("filtered " << filterCounter << "th item");
             // Filter result item belonging to any of the input structures
-            return !context->GetElementType(item).BitAnd(ScType::EdgeAccess) || contentOfAllInputStructures.count(item);
+            return !context->GetElementType(item).BitAnd(ScType::EdgeAccess) || contentOfAllInputStructures->count(item);
           });
     }
   }
