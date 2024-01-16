@@ -60,7 +60,8 @@ void TemplateExpressionNode::compute(LogicFormulaResult & result) const
 LogicFormulaResult TemplateExpressionNode::find(Replacements & replacements) const
 {
   LogicFormulaResult result;
-  std::vector<ScTemplateParams> paramsVector = ReplacementsUtils::getReplacementsToScTemplateParams(replacements);
+  std::vector<ScTemplateParams> paramsVector =
+      ReplacementsUtils::getReplacementsToScTemplateParams(getReplacementsWithoutEdges(replacements));
   Replacements resultReplacements;
   ScAddrHashSet variables;
   templateSearcher->getVariables(formula, variables);
@@ -77,86 +78,7 @@ LogicFormulaResult TemplateExpressionNode::find(Replacements & replacements) con
   return result;
 }
 
-/**
- * @brief Generate atomic logical formula using replacements
- * @param replacements variables and ScAddrs to use in generation
- * @return LogicFormulaResult{bool: value, bool: isGenerated, Replacements: replacements}
- */
-LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
-{
-  LogicFormulaResult result;
-  if (ReplacementsUtils::getColumnsAmount(replacements) == 0)
-  {
-    SC_LOG_INFO("Atomic logical formula " << context->HelperGetSystemIdtf(formula) << " is not generated");
-    return result;
-  }
-
-  Replacements fakeReplacements;
-  fakeReplacements[context->CreateNode(ScType::NodeVar)].push_back(context->CreateNode(ScType::NodeConstClass));
-  LogicFormulaResult const & resultWithoutReplacements = findInKb(fakeReplacements);
-
-  Replacements const & intersection =
-      ReplacementsUtils::intersectReplacements(replacements, resultWithoutReplacements.replacements);
-  
-  
-  ScAddrHashSet allVariables;
-  ReplacementsUtils::getKeySet(replacements, allVariables);
-  ScAddrHashSet formulaVariables;
-  templateSearcher->getVariables(formula, formulaVariables);
-  allVariables.insert(formulaVariables.cbegin(), formulaVariables.cend());
-
-  if (outputStructure.IsValid() && templateManager->getFillingType() == SEARCHED_AND_GENERATED &&
-      ReplacementsUtils::getColumnsAmount(intersection) > 0)
-  {
-    for (auto const & pair : intersection)
-    {
-      if (formulaVariables.find(pair.first) != formulaVariables.cend())
-      {
-        for (auto const & replacement : pair.second)
-        {
-          if (outputStructureElements.find(replacement) == outputStructureElements.cend())
-          {
-            context->CreateEdge(ScType::EdgeAccessConstPosPerm, outputStructure, replacement);
-            outputStructureElements.insert(replacement);
-          }
-        }
-      }
-    }
-    ScAddrHashSet formulaConstants;
-    templateSearcher->getConstants(formula, formulaConstants);
-    for (auto const & formulaConstant : formulaConstants)
-    {
-      if (outputStructureElements.find(formulaConstant) == outputStructureElements.cend())
-      {
-        context->CreateEdge(ScType::EdgeAccessConstPosPerm, outputStructure, formulaConstant);
-        outputStructureElements.insert(formulaConstant);
-      }
-    }
-  }
-
-  size_t count = 0;
-  if (templateManager->getGenerationType() == GENERATE_UNIQUE_FORMULAS)
-  {
-    Replacements const & difference =
-        ReplacementsUtils::subtractReplacements(replacements, resultWithoutReplacements.replacements);
-    generateByReplacements(difference, result, count, formulaVariables);
-  }
-  else
-    generateByReplacements(intersection, result, count, formulaVariables);
-
-  result.replacements = intersection;
-
-  SC_LOG_DEBUG(
-      "Atomic logical formula " << context->HelperGetSystemIdtf(formula) << " is generated " << count << " times");
-
-  return result;
-}
-
-void TemplateExpressionNode::generateByReplacements(
-    Replacements const & replacements,
-    LogicFormulaResult & result,
-    size_t & count,
-    ScAddrHashSet const & variables)
+Replacements TemplateExpressionNode::getReplacementsWithoutEdges(Replacements const & replacements) const
 {
   ScAddrHashSet edges;
   for (auto const & replacement : replacements)
@@ -164,74 +86,202 @@ void TemplateExpressionNode::generateByReplacements(
     if (context->GetElementType(replacement.first).IsEdge())
       edges.insert(replacement.first);
   }
-  Replacements const & replacementsWithoutEdges = ReplacementsUtils::removeRows(replacements, edges);
-  std::vector<ScTemplateParams> const & paramsVector = ReplacementsUtils::getReplacementsToScTemplateParams(replacementsWithoutEdges);
-  for (auto const & params : paramsVector)
-  {
-    Replacements searchResult;
-    if (templateManager->getGenerationType() == GENERATE_UNIQUE_FORMULAS)
-      templateSearcherInKb->searchTemplate(formula, params, variables, searchResult);
-    if (templateManager->getGenerationType() != GENERATE_UNIQUE_FORMULAS || searchResult.empty())
-    {
-      ScTemplate generatedTemplate;
-      context->HelperBuildTemplate(generatedTemplate, formula, params);
-
-      ScTemplateGenResult generationResult;
-      ScTemplate::Result const & genTemplate = context->HelperGenTemplate(generatedTemplate, generationResult);
-      if (genTemplate)
-      {
-        ++count;
-        result.isGenerated = true;
-        result.value = true;
-      }
-
-      if (outputStructure.IsValid())
-      {
-        for (size_t i = 0; i < generationResult.Size(); ++i)
-        {
-          ScAddr const & generatedElement = generationResult[i];
-          if (outputStructureElements.find(generatedElement) == outputStructureElements.cend())
-          {
-            context->CreateEdge(ScType::EdgeAccessConstPosPerm, outputStructure, generatedElement);
-            outputStructureElements.insert(generatedElement);
-          }
-        }
-      }
-      if (templateManager->getReplacementsUsingType() == REPLACEMENTS_FIRST && result.isGenerated)
-        break;
-    }
-  }
-  if (result.isGenerated)
-  {
-    ScAddrHashSet formulaConstants;
-    templateSearcher->getConstants(formula, formulaConstants);
-    for (auto const & formulaConstant : formulaConstants)
-    {
-      if (outputStructureElements.find(formulaConstant) == outputStructureElements.cend())
-      {
-        context->CreateEdge(ScType::EdgeAccessConstPosPerm, outputStructure, formulaConstant);
-        outputStructureElements.insert(formulaConstant);
-      }
-    }
-  }
+  return ReplacementsUtils::removeRows(replacements, edges);
 }
 
-LogicFormulaResult TemplateExpressionNode::findInKb(Replacements const & replacements) const
+/**
+ * @brief Generate atomic logical formula using replacements
+ * @param replacements variables and ScAddrs to use in generation
+ * @return LogicFormulaResult{bool: value, bool: isGenerated, Replacements: replacements}
+ */
+LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
 {
+  SC_LOG_INFO("TemplateExpressionNode::generate");
   LogicFormulaResult result;
-  std::vector<ScTemplateParams> paramsVector = ReplacementsUtils::getReplacementsToScTemplateParams(replacements);
+  if (ReplacementsUtils::getColumnsAmount(replacements) == 0)
+  {
+    SC_LOG_DEBUG("Atomic logical formula " << context->HelperGetSystemIdtf(formula) << " is not generated");
+    return result;
+  }
+
+  ScAddrHashSet formulaVariables;
+  templateSearcher->getVariables(formula, formulaVariables);
+  size_t count = 0;
+  Replacements searchResult;
+  Replacements generatedReplacements;
+  Replacements resultWithoutReplacements;
+  if (templateSearcher->getAtomicLogicalFormulaSearchBeforeGenerationType() == SEARCH_WITHOUT_REPLACEMENTS)
+  {
+    Replacements fakeReplacements;
+    fakeReplacements[context->CreateNode(ScType::NodeVar)].push_back(context->CreateNode(ScType::NodeConstClass));
+    resultWithoutReplacements = findInKb(fakeReplacements);
+
+    if (outputStructure.IsValid() && templateManager->getFillingType() == SEARCHED_AND_GENERATED
+        && ReplacementsUtils::getColumnsAmount(resultWithoutReplacements) > 0)
+    {
+      Replacements const & intersection =
+          ReplacementsUtils::intersectReplacements(replacements, resultWithoutReplacements);
+      if (ReplacementsUtils::getColumnsAmount(intersection) > 0)
+      {
+        addToOutputStructure(intersection, formulaVariables);
+        addFormulaConstantsToOutputStructure();
+      }
+    }
+  }
+
+  if (templateManager->getGenerationType() == GENERATE_UNIQUE_FORMULAS)
+  {
+    Replacements const & difference =
+        ReplacementsUtils::subtractReplacements(replacements, resultWithoutReplacements);
+    generateByReplacements(difference, result, count, formulaVariables, searchResult, generatedReplacements);
+  }
+  else
+    generateByReplacements(replacements, result, count, formulaVariables, searchResult, generatedReplacements);
+
+  result.replacements = ReplacementsUtils::intersectReplacements(
+      ReplacementsUtils::intersectReplacements(searchResult, resultWithoutReplacements),
+      generatedReplacements);
+
+  SC_LOG_DEBUG(
+      "Atomic logical formula " << context->HelperGetSystemIdtf(formula) << " is generated " << count << " times");
+
+  return result;
+}
+
+Replacements TemplateExpressionNode::findInKb(Replacements const & replacements) const
+{
+  std::vector<ScTemplateParams> paramsVector =
+      ReplacementsUtils::getReplacementsToScTemplateParams(getReplacementsWithoutEdges(replacements));
   Replacements resultReplacements;
   ScAddrHashSet variables;
   templateSearcherInKb->getVariables(formula, variables);
   SC_LOG_INFO("TemplateExpressionNode: call findInKb for " << paramsVector.size() << " params");
   templateSearcherInKb->searchTemplate(formula, paramsVector, variables, resultReplacements);
   SC_LOG_INFO("TemplateExpressionNode: findInKb finished");
-  result.replacements = resultReplacements;
-  result.value = !result.replacements.empty();
-
 
   std::string const idtf = context->HelperGetSystemIdtf(formula);
-  SC_LOG_DEBUG("findInKb Statement " << idtf << (result.value ? " true" : " false"));
+  SC_LOG_DEBUG("findInKb Statement " << idtf << (!resultReplacements.empty() ? " true" : " false"));
 
-  return result;
+  return resultReplacements;
+}
+
+void TemplateExpressionNode::generateByReplacements(
+    Replacements const & replacements,
+    LogicFormulaResult & result,
+    size_t & count,
+    ScAddrHashSet const & formulaVariables,
+    Replacements & searchResult,
+    Replacements & generatedReplacements)
+{
+  Replacements const & replacementsWithoutEdges = getReplacementsWithoutEdges(replacements);
+  std::vector<ScTemplateParams> const & paramsVector = ReplacementsUtils::getReplacementsToScTemplateParams(replacementsWithoutEdges);
+  processTemplateParams(paramsVector, formulaVariables, result, count, searchResult, generatedReplacements);
+  bool const searchResultIsAddedToOutput =
+      outputStructure.IsValid() && templateManager->getFillingType() == SEARCHED_AND_GENERATED &&
+      ReplacementsUtils::getColumnsAmount(searchResult) > 0 &&
+      templateSearcher->getAtomicLogicalFormulaSearchBeforeGenerationType() != SEARCH_WITHOUT_REPLACEMENTS;
+  if (searchResultIsAddedToOutput)
+    addToOutputStructure(searchResult, formulaVariables);
+  if ((result.isGenerated || searchResultIsAddedToOutput) && outputStructure.IsValid())
+    addFormulaConstantsToOutputStructure();
+}
+
+void TemplateExpressionNode::processTemplateParams(
+    vector<ScTemplateParams> const & paramsVector,
+    ScAddrHashSet const & formulaVariables,
+    LogicFormulaResult & result,
+    size_t & count,
+    Replacements & searchResult,
+    Replacements & generatedReplacements)
+{
+  for (ScTemplateParams const & params : paramsVector)
+  {
+    if (templateManager->getReplacementsUsingType() == REPLACEMENTS_FIRST && result.isGenerated)
+      return;
+    if (templateManager->getGenerationType() == GENERATE_UNIQUE_FORMULAS)
+      templateSearcherInKb->searchTemplate(formula, params, formulaVariables, searchResult);
+    if (templateManager->getGenerationType() != GENERATE_UNIQUE_FORMULAS || searchResult.empty())
+      generateByParams(params, formulaVariables, generatedReplacements, result, count);
+  }
+}
+
+void TemplateExpressionNode::generateByParams(
+    ScTemplateParams const & params,
+    ScAddrHashSet const & formulaVariables,
+    Replacements & generatedReplacements,
+    LogicFormulaResult & result,
+    size_t & count)
+{
+  ScTemplate generatedTemplate;
+  context->HelperBuildTemplate(generatedTemplate, formula, params);
+
+  ScTemplateGenResult generationResult;
+  ScTemplate::Result const & scTemplateResult = context->HelperGenTemplate(generatedTemplate, generationResult);
+  if (scTemplateResult)
+  {
+    ++count;
+    result.isGenerated = true;
+    result.value = true;
+    for (ScAddr const & variable : formulaVariables)
+    {
+      ScAddr outAddr;
+      if (generationResult.Get(variable, outAddr) || params.Get(variable, outAddr))
+        generatedReplacements[variable].push_back(outAddr);
+      else
+        SC_THROW_EXCEPTION(
+            utils::ExceptionInvalidState,
+            "generation result and template params do not have replacement for "
+                << variable.Hash());
+    }
+    addToOutputStructure(generationResult);
+  }
+}
+
+void TemplateExpressionNode::addFormulaConstantsToOutputStructure()
+{
+  ScAddrHashSet formulaConstants;
+  templateSearcher->getConstants(formula, formulaConstants);
+  addToOutputStructure(formulaConstants);
+}
+
+void TemplateExpressionNode::addToOutputStructure(Replacements const & replacements, ScAddrHashSet const & variables)
+{
+  if (outputStructure.IsValid())
+  {
+    for (auto const & pair : replacements)
+    {
+      if (variables.find(pair.first) != variables.cend())
+      {
+        for (auto const & replacement : pair.second)
+          processOutputStructureElement(replacement);
+      }
+    }
+  }
+}
+
+void TemplateExpressionNode::addToOutputStructure(ScAddrHashSet const & elements)
+{
+  if (outputStructure.IsValid())
+  {
+    for (auto const & element : elements)
+      processOutputStructureElement(element);
+  }
+}
+
+void TemplateExpressionNode::addToOutputStructure(ScTemplateResultItem const & item)
+{
+  if (outputStructure.IsValid())
+  {
+    for (size_t i = 0; i < item.Size(); ++i)
+      processOutputStructureElement(item[i]);
+  }
+}
+
+void TemplateExpressionNode::processOutputStructureElement(ScAddr const & element)
+{
+  if (outputStructureElements.find(element) == outputStructureElements.cend())
+  {
+    context->CreateEdge(ScType::EdgeAccessConstPosPerm, outputStructure, element);
+    outputStructureElements.insert(element);
+  }
 }

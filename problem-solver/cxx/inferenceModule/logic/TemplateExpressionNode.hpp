@@ -51,7 +51,28 @@ private:
       Replacements const & replacements,
       LogicFormulaResult & result,
       size_t & count,
-      ScAddrHashSet const & variables);
+      ScAddrHashSet const & formulaVariables,
+      Replacements & searchResult,
+      Replacements & generatedReplacements);
 
-  LogicFormulaResult findInKb(Replacements const & replacements) const;
+  Replacements findInKb(Replacements const & replacements) const;
+  void addToOutputStructure(Replacements const & replacements, ScAddrHashSet const & variables);
+  void addToOutputStructure(ScAddrHashSet const & elements);
+  void addToOutputStructure(ScTemplateResultItem const & item);
+  void generateByParams(
+      ScTemplateParams const & params,
+      ScAddrHashSet const & formulaVariables,
+      Replacements & generatedReplacements,
+      LogicFormulaResult & result,
+      size_t & count);
+  void processOutputStructureElement(ScAddr const & element);
+  Replacements getReplacementsWithoutEdges(Replacements const & replacements) const;
+  void addFormulaConstantsToOutputStructure();
+  void processTemplateParams(
+      vector<ScTemplateParams> const & paramsVector,
+      ScAddrHashSet const & formulaVariables,
+      LogicFormulaResult & result,
+      size_t & count,
+      Replacements & searchResult,
+      Replacements & generatedReplacements);
 };

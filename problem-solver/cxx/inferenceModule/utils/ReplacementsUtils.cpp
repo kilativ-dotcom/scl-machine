@@ -258,8 +258,9 @@ void inference::ReplacementsUtils::removeDuplicateColumns(Replacements & replace
   getKeySet(replacements, keys);
   if (keys.empty())
     return;
-  std::unordered_map<ScAddr, ScAddr, ScAddrHashFunc<uint32_t>> column;
   ReplacementsHashes const & replacementsHashes = calculateHashesForCommonKeys(replacements, keys);
+  std::unordered_map<ScAddr, ScAddr, ScAddrHashFunc<uint32_t>> column;
+  std::set<size_t> columnsToRemove;
   for (auto const & replacementsHash : replacementsHashes)
   {
     auto const & columnsForHash = replacementsHash.second;
@@ -282,18 +283,20 @@ void inference::ReplacementsUtils::removeDuplicateColumns(Replacements & replace
             }
           }
           if (!columnIsUnique)
-          {
-            for (auto const & key : keys)
-            {
-              ScAddrVector & replacementValues = replacements.find(key)->second;
-              replacementValues.erase(replacementValues.begin() + columnsForHash[comparedColumnIndex]);
-            }
-            comparedColumnIndex--;
-          }
+            columnsToRemove.insert(columnsForHash[comparedColumnIndex]);
         }
       }
     }
   }
+  for (auto columnToRemove = columnsToRemove.crbegin(); columnToRemove != columnsToRemove.crend(); columnToRemove++)
+  {
+    for (auto const & key : keys)
+    {
+      ScAddrVector & replacementValues = replacements.find(key)->second;
+      replacementValues.erase(replacementValues.begin() + static_cast<long>(*columnToRemove));
+    }
+  }
+
   SC_LOG_INFO("ReplacementsUtils::removeDuplicateColumns finish with " << getColumnsAmount(replacements) << " columns");
 }
 

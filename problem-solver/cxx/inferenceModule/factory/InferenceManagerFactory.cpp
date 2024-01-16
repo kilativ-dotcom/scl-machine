@@ -54,6 +54,8 @@ std::unique_ptr<InferenceManagerAbstract> InferenceManagerFactory::constructDire
   }
   templateSearcher->setReplacementsUsingType(inferenceFlowConfig.replacementsUsingType);
   templateSearcher->setOutputStructureFillingType(inferenceFlowConfig.fillingType);
+  templateSearcher->setAtomicLogicalFormulaSearchBeforeGenerationType(
+      inferenceFlowConfig.atomicLogicalFormulaSearchBeforeGenerationType);
   strategyAll->setTemplateSearcher(templateSearcher);
 
   return strategyAll;
@@ -97,6 +99,8 @@ std::unique_ptr<InferenceManagerAbstract> InferenceManagerFactory::constructDire
   }
   templateSearcher->setReplacementsUsingType(inferenceFlowConfig.replacementsUsingType);
   templateSearcher->setOutputStructureFillingType(inferenceFlowConfig.fillingType);
+  templateSearcher->setAtomicLogicalFormulaSearchBeforeGenerationType(
+      inferenceFlowConfig.atomicLogicalFormulaSearchBeforeGenerationType);
   strategyTarget->setTemplateSearcher(templateSearcher);
 
   return strategyTarget;
