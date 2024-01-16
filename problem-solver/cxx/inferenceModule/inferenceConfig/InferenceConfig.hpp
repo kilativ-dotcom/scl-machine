@@ -42,8 +42,8 @@ enum OutputStructureFillingType
 
 enum AtomicLogicalFormulaSearchBeforeGenerationType
 {
-  SEARCH_WITHOUT_REPLACEMENTS = 1,
-  SEARCH_WITH_REPLACEMENTS = 2
+  SEARCH_WITH_REPLACEMENTS = 1,
+  SEARCH_WITHOUT_REPLACEMENTS = 2
 };
 
 struct InferenceConfig
