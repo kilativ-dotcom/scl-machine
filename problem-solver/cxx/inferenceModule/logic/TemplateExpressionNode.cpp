@@ -85,6 +85,11 @@ LogicFormulaResult TemplateExpressionNode::find(Replacements & replacements) con
 LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
 {
   LogicFormulaResult result;
+  if (ReplacementsUtils::getColumnsAmount(replacements) == 0)
+  {
+    SC_LOG_INFO("Atomic logical formula " << context->HelperGetSystemIdtf(formula) << " is not generated");
+    return result;
+  }
 
   Replacements fakeReplacements;
   fakeReplacements[context->CreateNode(ScType::NodeVar)].push_back(context->CreateNode(ScType::NodeConstClass));
