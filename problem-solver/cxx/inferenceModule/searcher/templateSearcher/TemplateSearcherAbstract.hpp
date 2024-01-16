@@ -66,6 +66,12 @@ public:
     outputStructureFillingType = otherOutputStructureFillingType;
   }
 
+  void setAtomicLogicalFormulaSearchBeforeGenerationType(
+      AtomicLogicalFormulaSearchBeforeGenerationType const otherAtomicLogicalFormulaSearchBeforeGenerationType)
+  {
+    atomicLogicalFormulaSearchBeforeGenerationType = otherAtomicLogicalFormulaSearchBeforeGenerationType;
+  }
+
   ReplacementsUsingType getReplacementsUsingType() const
   {
     return replacementsUsingType;
@@ -74,6 +80,11 @@ public:
   OutputStructureFillingType getOutputStructureFillingType() const
   {
     return outputStructureFillingType;
+  }
+
+  AtomicLogicalFormulaSearchBeforeGenerationType getAtomicLogicalFormulaSearchBeforeGenerationType() const
+  {
+    return atomicLogicalFormulaSearchBeforeGenerationType;
   }
 
 protected:
@@ -90,5 +101,6 @@ protected:
   ScAddrVector inputStructures;
   ReplacementsUsingType replacementsUsingType;
   OutputStructureFillingType outputStructureFillingType;
+  AtomicLogicalFormulaSearchBeforeGenerationType atomicLogicalFormulaSearchBeforeGenerationType;
 };
 }  // namespace inference
