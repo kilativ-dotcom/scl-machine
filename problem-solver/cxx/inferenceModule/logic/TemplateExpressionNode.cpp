@@ -39,16 +39,15 @@ void TemplateExpressionNode::compute(LogicFormulaResult & result) const
   // Template params should be created only if argument vector is not empty. Else search with any possible replacements
   if (!argumentVector.empty())
   {
-    SC_LOG_INFO("TemplateExpressionNode: compute for not empty arguments");
+    SC_LOG_DEBUG("TemplateExpressionNode: compute for " << argumentVector.size() << " arguments");
     std::vector<ScTemplateParams> const & templateParamsVector = templateManager->createTemplateParams(formula);
     templateSearcher->searchTemplate(formula, templateParamsVector, variables, replacements);
   }
   else
   {
-    SC_LOG_INFO("TemplateExpressionNode: compute for empty arguments");
+    SC_LOG_DEBUG("TemplateExpressionNode: compute for empty arguments");
     templateSearcher->searchTemplate(formula, ScTemplateParams(), variables, replacements);
   }
-  SC_LOG_INFO("TemplateExpressionNode: compute finished");
 
   result.replacements = replacements;
   result.value = !result.replacements.empty();
@@ -65,9 +64,8 @@ LogicFormulaResult TemplateExpressionNode::find(Replacements & replacements) con
   Replacements resultReplacements;
   ScAddrHashSet variables;
   templateSearcher->getVariables(formula, variables);
-  SC_LOG_INFO("TemplateExpressionNode: call search for " << paramsVector.size() << " params");
+  SC_LOG_DEBUG("TemplateExpressionNode: call search for " << paramsVector.size() << " params");
   templateSearcher->searchTemplate(formula, paramsVector, variables, resultReplacements);
-  SC_LOG_INFO("TemplateExpressionNode: search finished");
   result.replacements = resultReplacements;
   result.value = !result.replacements.empty();
 
@@ -96,7 +94,32 @@ Replacements TemplateExpressionNode::getReplacementsWithoutEdges(Replacements co
  */
 LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
 {
-  SC_LOG_INFO("TemplateExpressionNode::generate");
+
+  /*
+   конфигурируется количеством генераций(одна или все)
+      пока не понятно как завершать, во всех ветках программы можно проверять isGenerated && ReplacementsFirst
+   конфигурируется предварительный поиск([на пустых подстановках один раз по всей базе] или [на переданных подстановках
+   перед каждой генерацией])
+      наверно один иф, который вызывает или
+      ++проблема+ надо искать только по необходимости, и если по всей базе, то хешировать(возможно searchPerformed: bool
+        + searchResult: Replacements)
+      ??непонятка? если включён режим GenerateUnique + ReplacementsFirst, может быть сёрчер всегда одно и то же будет отдавать
+   конфигурируется проверкой перед генерацией(есть или нет)
+      предварительный поиск и проверка перед генерацией должны ифаться в одних и тех же местах(если не нужны проверки
+      перед генерацией, то предварительный поиск не нужен)
+   конфигурируется формированием выходной структуры(только сгенерированное или найденное+сгенерированное)
+      внутри isGenerated, выглядит нетрудно(посмотрим)
+
+
+  пересечение посчитанных ранее и найденных по базе имеет смысл только в том случае, когда был заказан ReplacementsAll,
+      если попросили ReplacementsFirst, то лишний поиск будет лишним, в таком случае надо сначала понять зачем вообще нужно это пересечение
+
+          похоже, что они нужны только тогда, когда SearchedAndGenerated + ReplacementsAll
+
+   в старую логику надо просто добавить возможность делать предварительный поиск по всей базе, может просто вынести в два
+  метода и там потом посмотреть куда можно общие части вынести
+
+      */
   LogicFormulaResult result;
   if (ReplacementsUtils::getColumnsAmount(replacements) == 0)
   {
@@ -115,18 +138,6 @@ LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
     Replacements fakeReplacements;
     fakeReplacements[context->CreateNode(ScType::NodeVar)].push_back(context->CreateNode(ScType::NodeConstClass));
     resultWithoutReplacements = findInKb(fakeReplacements);
-
-    if (outputStructure.IsValid() && templateManager->getFillingType() == SEARCHED_AND_GENERATED
-        && ReplacementsUtils::getColumnsAmount(resultWithoutReplacements) > 0)
-    {
-      Replacements const & intersection =
-          ReplacementsUtils::intersectReplacements(replacements, resultWithoutReplacements);
-      if (ReplacementsUtils::getColumnsAmount(intersection) > 0)
-      {
-        addToOutputStructure(intersection, formulaVariables);
-        addFormulaConstantsToOutputStructure();
-      }
-    }
   }
 
   if (templateManager->getGenerationType() == GENERATE_UNIQUE_FORMULAS)
@@ -137,6 +148,25 @@ LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
   }
   else
     generateByReplacements(replacements, result, count, formulaVariables, searchResult, generatedReplacements);
+
+  if (outputStructure.IsValid() && templateManager->getFillingType() == SEARCHED_AND_GENERATED)
+  {
+    if (ReplacementsUtils::getColumnsAmount(resultWithoutReplacements) > 0)
+    {
+      Replacements const & intersection =
+          ReplacementsUtils::intersectReplacements(replacements, resultWithoutReplacements);
+      if (ReplacementsUtils::getColumnsAmount(intersection) > 0)
+      {
+        addToOutputStructure(intersection, formulaVariables);
+        addFormulaConstantsToOutputStructure();
+      }
+    }
+    if (ReplacementsUtils::getColumnsAmount(searchResult) > 0)
+    {
+      addToOutputStructure(searchResult, formulaVariables);
+      addFormulaConstantsToOutputStructure();
+    }
+  }
 
   result.replacements = ReplacementsUtils::intersectReplacements(
       ReplacementsUtils::intersectReplacements(searchResult, resultWithoutReplacements),
@@ -155,9 +185,8 @@ Replacements TemplateExpressionNode::findInKb(Replacements const & replacements)
   Replacements resultReplacements;
   ScAddrHashSet variables;
   templateSearcherInKb->getVariables(formula, variables);
-  SC_LOG_INFO("TemplateExpressionNode: call findInKb for " << paramsVector.size() << " params");
+  SC_LOG_DEBUG("TemplateExpressionNode: call findInKb for " << paramsVector.size() << " params");
   templateSearcherInKb->searchTemplate(formula, paramsVector, variables, resultReplacements);
-  SC_LOG_INFO("TemplateExpressionNode: findInKb finished");
 
   std::string const idtf = context->HelperGetSystemIdtf(formula);
   SC_LOG_DEBUG("findInKb Statement " << idtf << (!resultReplacements.empty() ? " true" : " false"));
@@ -176,14 +205,6 @@ void TemplateExpressionNode::generateByReplacements(
   Replacements const & replacementsWithoutEdges = getReplacementsWithoutEdges(replacements);
   std::vector<ScTemplateParams> const & paramsVector = ReplacementsUtils::getReplacementsToScTemplateParams(replacementsWithoutEdges);
   processTemplateParams(paramsVector, formulaVariables, result, count, searchResult, generatedReplacements);
-  bool const searchResultIsAddedToOutput =
-      outputStructure.IsValid() && templateManager->getFillingType() == SEARCHED_AND_GENERATED &&
-      ReplacementsUtils::getColumnsAmount(searchResult) > 0 &&
-      templateSearcher->getAtomicLogicalFormulaSearchBeforeGenerationType() != SEARCH_WITHOUT_REPLACEMENTS;
-  if (searchResultIsAddedToOutput)
-    addToOutputStructure(searchResult, formulaVariables);
-  if ((result.isGenerated || searchResultIsAddedToOutput) && outputStructure.IsValid())
-    addFormulaConstantsToOutputStructure();
 }
 
 void TemplateExpressionNode::processTemplateParams(
