@@ -11,7 +11,7 @@ Replacements inference::ReplacementsUtils::intersectReplacements(
     Replacements const & first,
     Replacements const & second)
 {
-  SC_LOG_INFO(
+  SC_LOG_DEBUG(
       "intersecting " << first.size() << "x" << getColumnsAmount(first) << " and " << second.size() << "x"
                       << getColumnsAmount(second));
   Replacements result;
@@ -76,13 +76,13 @@ Replacements inference::ReplacementsUtils::intersectReplacements(
     }
   }
   removeDuplicateColumns(result);
-  SC_LOG_INFO("returning intersected " << result.size() << "x" << getColumnsAmount(result));
+  SC_LOG_DEBUG("returning intersected " << result.size() << "x" << getColumnsAmount(result));
   return result;
 }
 
 Replacements inference::ReplacementsUtils::subtractReplacements(Replacements const & first, Replacements const & second)
 {
-  SC_LOG_INFO(
+  SC_LOG_DEBUG(
       "subtracting " << first.size() << "x" << getColumnsAmount(first) << " and " << second.size() << "x"
                      << getColumnsAmount(second));
   Replacements result;
@@ -145,7 +145,7 @@ Replacements inference::ReplacementsUtils::subtractReplacements(Replacements con
       result[firstKey].push_back(first.find(firstKey)->second[firstColumn]);
   }
   removeDuplicateColumns(result);
-  SC_LOG_INFO("returning subtracted " << result.size() << "x" << getColumnsAmount(result));
+  SC_LOG_DEBUG("returning subtracted " << result.size() << "x" << getColumnsAmount(result));
   return result;
 }
 
@@ -253,7 +253,7 @@ size_t inference::ReplacementsUtils::getColumnsAmount(Replacements const & repla
 
 void inference::ReplacementsUtils::removeDuplicateColumns(Replacements & replacements)
 {
-  SC_LOG_INFO("ReplacementsUtils::removeDuplicateColumns for " << getColumnsAmount(replacements) << " columns");
+  SC_LOG_DEBUG("ReplacementsUtils::removeDuplicateColumns for " << getColumnsAmount(replacements) << " columns");
   ScAddrHashSet keys;
   getKeySet(replacements, keys);
   if (keys.empty())
@@ -297,7 +297,7 @@ void inference::ReplacementsUtils::removeDuplicateColumns(Replacements & replace
     }
   }
 
-  SC_LOG_INFO("ReplacementsUtils::removeDuplicateColumns finish with " << getColumnsAmount(replacements) << " columns");
+  SC_LOG_DEBUG("ReplacementsUtils::removeDuplicateColumns finish with " << getColumnsAmount(replacements) << " columns");
 }
 
 ReplacementsHashes inference::ReplacementsUtils::calculateHashesForCommonKeys(
