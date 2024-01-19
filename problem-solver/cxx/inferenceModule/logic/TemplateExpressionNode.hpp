@@ -75,4 +75,10 @@ private:
       size_t & count,
       Replacements & searchResult,
       Replacements & generatedReplacements);
+  Replacements getSearchResultWithoutReplacementsIfNeeded() const;
+  void fillOutputStructure(
+      ScAddrHashSet const & formulaVariables,
+      Replacements const & replacements,
+      Replacements const & resultWithoutReplacements,
+      Replacements const & searchResult);
 };

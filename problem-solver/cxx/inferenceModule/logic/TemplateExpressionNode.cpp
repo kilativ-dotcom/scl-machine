@@ -94,32 +94,6 @@ Replacements TemplateExpressionNode::getReplacementsWithoutEdges(Replacements co
  */
 LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
 {
-
-  /*
-   конфигурируется количеством генераций(одна или все)
-      пока не понятно как завершать, во всех ветках программы можно проверять isGenerated && ReplacementsFirst
-   конфигурируется предварительный поиск([на пустых подстановках один раз по всей базе] или [на переданных подстановках
-   перед каждой генерацией])
-      наверно один иф, который вызывает или
-      ++проблема+ надо искать только по необходимости, и если по всей базе, то хешировать(возможно searchPerformed: bool
-        + searchResult: Replacements)
-      ??непонятка? если включён режим GenerateUnique + ReplacementsFirst, может быть сёрчер всегда одно и то же будет отдавать
-   конфигурируется проверкой перед генерацией(есть или нет)
-      предварительный поиск и проверка перед генерацией должны ифаться в одних и тех же местах(если не нужны проверки
-      перед генерацией, то предварительный поиск не нужен)
-   конфигурируется формированием выходной структуры(только сгенерированное или найденное+сгенерированное)
-      внутри isGenerated, выглядит нетрудно(посмотрим)
-
-
-  пересечение посчитанных ранее и найденных по базе имеет смысл только в том случае, когда был заказан ReplacementsAll,
-      если попросили ReplacementsFirst, то лишний поиск будет лишним, в таком случае надо сначала понять зачем вообще нужно это пересечение
-
-          похоже, что они нужны только тогда, когда SearchedAndGenerated + ReplacementsAll
-
-   в старую логику надо просто добавить возможность делать предварительный поиск по всей базе, может просто вынести в два
-  метода и там потом посмотреть куда можно общие части вынести
-
-      */
   LogicFormulaResult result;
   if (ReplacementsUtils::getColumnsAmount(replacements) == 0)
   {
@@ -129,53 +103,45 @@ LogicFormulaResult TemplateExpressionNode::generate(Replacements & replacements)
 
   ScAddrHashSet formulaVariables;
   templateSearcher->getVariables(formula, formulaVariables);
+  Replacements resultWithoutReplacements = getSearchResultWithoutReplacementsIfNeeded();
+
   size_t count = 0;
   Replacements searchResult;
   Replacements generatedReplacements;
-  Replacements resultWithoutReplacements;
-  if (templateSearcher->getAtomicLogicalFormulaSearchBeforeGenerationType() == SEARCH_WITHOUT_REPLACEMENTS)
-  {
-    Replacements fakeReplacements;
-    fakeReplacements[context->CreateNode(ScType::NodeVar)].push_back(context->CreateNode(ScType::NodeConstClass));
-    resultWithoutReplacements = findInKb(fakeReplacements);
-  }
-
   if (templateManager->getGenerationType() == GENERATE_UNIQUE_FORMULAS)
   {
-    Replacements const & difference =
+    Replacements const & replacementsNotInKb =
         ReplacementsUtils::subtractReplacements(replacements, resultWithoutReplacements);
-    generateByReplacements(difference, result, count, formulaVariables, searchResult, generatedReplacements);
+    generateByReplacements(replacementsNotInKb, result, count, formulaVariables, searchResult, generatedReplacements);
   }
   else
     generateByReplacements(replacements, result, count, formulaVariables, searchResult, generatedReplacements);
 
-  if (outputStructure.IsValid() && templateManager->getFillingType() == SEARCHED_AND_GENERATED)
-  {
-    if (ReplacementsUtils::getColumnsAmount(resultWithoutReplacements) > 0)
-    {
-      Replacements const & intersection =
-          ReplacementsUtils::intersectReplacements(replacements, resultWithoutReplacements);
-      if (ReplacementsUtils::getColumnsAmount(intersection) > 0)
-      {
-        addToOutputStructure(intersection, formulaVariables);
-        addFormulaConstantsToOutputStructure();
-      }
-    }
-    if (ReplacementsUtils::getColumnsAmount(searchResult) > 0)
-    {
-      addToOutputStructure(searchResult, formulaVariables);
-      addFormulaConstantsToOutputStructure();
-    }
-  }
+  fillOutputStructure(formulaVariables, replacements, resultWithoutReplacements, searchResult);
 
-  result.replacements = ReplacementsUtils::intersectReplacements(
-      ReplacementsUtils::intersectReplacements(searchResult, resultWithoutReplacements),
-      generatedReplacements);
+  result.replacements = ReplacementsUtils::uniteReplacements(
+      ReplacementsUtils::uniteReplacements(searchResult, resultWithoutReplacements), generatedReplacements);
 
   SC_LOG_DEBUG(
       "Atomic logical formula " << context->HelperGetSystemIdtf(formula) << " is generated " << count << " times");
 
   return result;
+}
+
+Replacements TemplateExpressionNode::getSearchResultWithoutReplacementsIfNeeded() const
+{
+  Replacements resultWithoutReplacements;
+  if (templateSearcher->getAtomicLogicalFormulaSearchBeforeGenerationType() == SEARCH_WITHOUT_REPLACEMENTS)
+  {
+    Replacements fakeReplacements;
+    ScAddr const & tempVariable = context->CreateNode(ScType::NodeVar);
+    ScAddr const & tempConstant = context->CreateNode(ScType::NodeConstClass);
+    fakeReplacements[tempVariable].push_back(tempConstant);
+    resultWithoutReplacements = findInKb(fakeReplacements);
+    context->EraseElement(tempVariable);
+    context->EraseElement(tempConstant);
+  }
+  return resultWithoutReplacements;
 }
 
 Replacements TemplateExpressionNode::findInKb(Replacements const & replacements) const
@@ -203,7 +169,8 @@ void TemplateExpressionNode::generateByReplacements(
     Replacements & generatedReplacements)
 {
   Replacements const & replacementsWithoutEdges = getReplacementsWithoutEdges(replacements);
-  std::vector<ScTemplateParams> const & paramsVector = ReplacementsUtils::getReplacementsToScTemplateParams(replacementsWithoutEdges);
+  std::vector<ScTemplateParams> const & paramsVector =
+      ReplacementsUtils::getReplacementsToScTemplateParams(replacementsWithoutEdges);
   processTemplateParams(paramsVector, formulaVariables, result, count, searchResult, generatedReplacements);
 }
 
@@ -255,6 +222,32 @@ void TemplateExpressionNode::generateByParams(
                 << variable.Hash());
     }
     addToOutputStructure(generationResult);
+  }
+}
+
+void TemplateExpressionNode::fillOutputStructure(
+    ScAddrHashSet const & formulaVariables,
+    Replacements const & replacements,
+    Replacements const & resultWithoutReplacements,
+    Replacements const & searchResult)
+{
+  if (outputStructure.IsValid() && templateManager->getFillingType() == SEARCHED_AND_GENERATED)
+  {
+    if (ReplacementsUtils::getColumnsAmount(resultWithoutReplacements) > 0)
+    {
+      Replacements const & alreadyExistedReplacements =
+          ReplacementsUtils::intersectReplacements(replacements, resultWithoutReplacements);
+      if (ReplacementsUtils::getColumnsAmount(alreadyExistedReplacements) > 0)
+      {
+        addToOutputStructure(alreadyExistedReplacements, formulaVariables);
+        addFormulaConstantsToOutputStructure();
+      }
+    }
+    if (ReplacementsUtils::getColumnsAmount(searchResult) > 0)
+    {
+      addToOutputStructure(searchResult, formulaVariables);
+      addFormulaConstantsToOutputStructure();
+    }
   }
 }
 
