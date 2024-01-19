@@ -14,9 +14,9 @@
 #include "keynodes/InferenceKeynodes.hpp"
 #include "factory/InferenceManagerFactory.hpp"
 
-using namespace inference;
+#include "ConfigGenerators.hpp"
 
-namespace inferenceManagerBuilderTest
+namespace inference::inferenceManagerBuilderTest
 {
 ScsLoader loader;
 std::string const TEST_FILES_DIR_PATH =
@@ -30,7 +30,11 @@ std::string const TAIL = "tail";
 std::string const TARGET_NODE_CLASS = "target_node_class";
 std::string const CURRENT_NODE_CLASS = "current_node_class";
 
-using InferenceManagerBuilderTest = ScMemoryTest;
+class InferenceManagerBuilderTest
+  : public ScMemoryTest
+  , public testing::WithParamInterface<std::shared_ptr<generatorTest::ConfigGenerator>>
+{
+};
 
 void initialize()
 {
@@ -38,8 +42,21 @@ void initialize()
   scAgentsCommon::CoreKeynodes::InitGlobal();
 }
 
+std::shared_ptr<generatorTest::ConfigGenerator> generators[] = {
+    std::make_shared<generatorTest::ConfigGenerator>(),
+    std::make_shared<generatorTest::ConfigGeneratorSearchWithReplacements>(),
+    std::make_shared<generatorTest::ConfigGeneratorSearchWithoutReplacements>()};
+
+INSTANTIATE_TEST_SUITE_P(
+    InferenceManagerBuilderTestInitiator,
+    InferenceManagerBuilderTest,
+    testing::ValuesIn(generators),
+    [](testing::TestParamInfo<std::shared_ptr<generatorTest::ConfigGenerator>> const & testParamInfo) {
+      return testParamInfo.param->getName();
+    });
+
 // Distributed input structures
-TEST_F(InferenceManagerBuilderTest, SingleSuccessApplyInference)
+TEST_P(InferenceManagerBuilderTest, SingleSuccessApplyInference)
 {
   ScMemoryContext & context = *m_ctx;
 
@@ -66,8 +83,8 @@ TEST_F(InferenceManagerBuilderTest, SingleSuccessApplyInference)
   InferenceParams const & inferenceParams{formulasSet, arguments, inputStructures, outputStructure};
 
   // Create inference manager with `strategy all` using director
-  InferenceConfig const & inferenceConfig{
-      GENERATE_ALL_FORMULAS, REPLACEMENTS_ALL, TREE_ONLY_OUTPUT_STRUCTURE, SEARCH_IN_STRUCTURES};
+  InferenceConfig const & inferenceConfig = GetParam()->getInferenceConfig(
+      {GENERATE_ALL_FORMULAS, REPLACEMENTS_ALL, TREE_ONLY_OUTPUT_STRUCTURE, SEARCH_IN_STRUCTURES});
   std::unique_ptr<inference::InferenceManagerAbstract> iterationStrategy =
       inference::InferenceManagerFactory::constructDirectInferenceManagerAll(&context, inferenceConfig);
 
@@ -84,7 +101,7 @@ TEST_F(InferenceManagerBuilderTest, SingleSuccessApplyInference)
   EXPECT_TRUE(context.HelperCheckEdge(targetClass, argument, ScType::EdgeAccessConstPosPerm));
 }
 
-TEST_F(InferenceManagerBuilderTest, GenerateNotUnique)
+TEST_P(InferenceManagerBuilderTest, GenerateNotUnique)
 {
   ScMemoryContext & context = *m_ctx;
 
@@ -98,8 +115,8 @@ TEST_F(InferenceManagerBuilderTest, GenerateNotUnique)
   InferenceParams const & inferenceParams{formulasSet, {argument}, {inputStructure1}, outputStructure};
 
   // GenerationType = GENERATE_ALL
-  InferenceConfig const & inferenceConfig{
-      GENERATE_ALL_FORMULAS, REPLACEMENTS_ALL, TREE_ONLY_OUTPUT_STRUCTURE, SEARCH_IN_STRUCTURES};
+  InferenceConfig const & inferenceConfig = GetParam()->getInferenceConfig(
+      {GENERATE_ALL_FORMULAS, REPLACEMENTS_ALL, TREE_ONLY_OUTPUT_STRUCTURE, SEARCH_IN_STRUCTURES});
   std::unique_ptr<inference::InferenceManagerAbstract> iterationStrategy =
       inference::InferenceManagerFactory::constructDirectInferenceManagerAll(&context, inferenceConfig);
 
@@ -121,7 +138,7 @@ TEST_F(InferenceManagerBuilderTest, GenerateNotUnique)
 }
 
 // Logical formula is not generated because of generateOnlyUnique = true flag
-TEST_F(InferenceManagerBuilderTest, GenerateUnique)
+TEST_P(InferenceManagerBuilderTest, GenerateUnique)
 {
   ScMemoryContext & context = *m_ctx;
 
@@ -135,8 +152,8 @@ TEST_F(InferenceManagerBuilderTest, GenerateUnique)
   InferenceParams const & inferenceParams{formulasSet, {argument}, {inputStructure1}, outputStructure};
 
   // GenerationType = GENERATE_UNIQUE
-  InferenceConfig const & inferenceConfig{
-      GENERATE_UNIQUE_FORMULAS, REPLACEMENTS_ALL, TREE_ONLY_OUTPUT_STRUCTURE, SEARCH_IN_STRUCTURES};
+  InferenceConfig const & inferenceConfig = GetParam()->getInferenceConfig(
+      {GENERATE_UNIQUE_FORMULAS, REPLACEMENTS_ALL, TREE_ONLY_OUTPUT_STRUCTURE, SEARCH_IN_STRUCTURES});
   std::unique_ptr<inference::InferenceManagerAbstract> iterationStrategy =
       inference::InferenceManagerFactory::constructDirectInferenceManagerAll(&context, inferenceConfig);
 
@@ -154,12 +171,13 @@ TEST_F(InferenceManagerBuilderTest, GenerateUnique)
   EXPECT_TRUE(targetClassIterator->Next());
   EXPECT_FALSE(targetClassIterator->Next());
 
-  ScIterator3Ptr const & outputStructureIterator = context.Iterator3(outputStructure, ScType::EdgeAccessConstPosPerm, ScType::Unknown);
+  ScIterator3Ptr const & outputStructureIterator =
+      context.Iterator3(outputStructure, ScType::EdgeAccessConstPosPerm, ScType::Unknown);
   EXPECT_FALSE(outputStructureIterator->Next());
 }
 
 // Logical formula is not generated because of generateOnlyUnique = true flag
-TEST_F(InferenceManagerBuilderTest, GenerateUniqueWithOutputStructure)
+TEST_P(InferenceManagerBuilderTest, GenerateUniqueWithOutputStructure)
 {
   ScMemoryContext & context = *m_ctx;
 
@@ -173,12 +191,12 @@ TEST_F(InferenceManagerBuilderTest, GenerateUniqueWithOutputStructure)
   InferenceParams const & inferenceParams{formulasSet, {argument}, {inputStructure1}, outputStructure};
 
   // GenerationType = GENERATE_UNIQUE
-  InferenceConfig const & inferenceConfig{
-      GENERATE_UNIQUE_FORMULAS,
-      REPLACEMENTS_ALL,
-      TREE_ONLY_OUTPUT_STRUCTURE,
-      SEARCH_IN_STRUCTURES,
-      SEARCHED_AND_GENERATED};
+  InferenceConfig const & inferenceConfig = GetParam()->getInferenceConfig(
+      {GENERATE_UNIQUE_FORMULAS,
+       REPLACEMENTS_ALL,
+       TREE_ONLY_OUTPUT_STRUCTURE,
+       SEARCH_IN_STRUCTURES,
+       SEARCHED_AND_GENERATED});
   std::unique_ptr<inference::InferenceManagerAbstract> iterationStrategy =
       inference::InferenceManagerFactory::constructDirectInferenceManagerAll(&context, inferenceConfig);
 
@@ -196,7 +214,8 @@ TEST_F(InferenceManagerBuilderTest, GenerateUniqueWithOutputStructure)
   EXPECT_TRUE(targetClassIterator->Next());
   EXPECT_FALSE(targetClassIterator->Next());
 
-  ScIterator3Ptr const & outputStructureIterator = context.Iterator3(outputStructure, ScType::EdgeAccessConstPosPerm, ScType::Unknown);
+  ScIterator3Ptr const & outputStructureIterator =
+      context.Iterator3(outputStructure, ScType::EdgeAccessConstPosPerm, ScType::Unknown);
   EXPECT_TRUE(outputStructureIterator->Next());
   EXPECT_TRUE(outputStructureIterator->Next());
   EXPECT_TRUE(outputStructureIterator->Next());
@@ -204,7 +223,7 @@ TEST_F(InferenceManagerBuilderTest, GenerateUniqueWithOutputStructure)
 }
 
 // Test if all structures was generated by all arguments
-TEST_F(InferenceManagerBuilderTest, GenerateNotFirst)
+TEST_P(InferenceManagerBuilderTest, GenerateNotFirst)
 {
   ScMemoryContext & context = *m_ctx;
 
@@ -223,8 +242,8 @@ TEST_F(InferenceManagerBuilderTest, GenerateNotFirst)
   ScAddr const & rulesSet = context.HelperResolveSystemIdtf(FORMULAS_SET);
   ScAddr const & outputStructure = context.CreateNode(ScType::NodeConstStruct);
 
-  InferenceConfig const & inferenceConfig{
-      GENERATE_ALL_FORMULAS, REPLACEMENTS_ALL, TREE_ONLY_OUTPUT_STRUCTURE, SEARCH_IN_STRUCTURES};
+  InferenceConfig const & inferenceConfig = GetParam()->getInferenceConfig(
+      {GENERATE_ALL_FORMULAS, REPLACEMENTS_ALL, TREE_ONLY_OUTPUT_STRUCTURE, SEARCH_IN_STRUCTURES});
   std::unique_ptr<inference::InferenceManagerAbstract> iterationStrategy =
       inference::InferenceManagerFactory::constructDirectInferenceManagerAll(&context, inferenceConfig);
 
@@ -258,7 +277,7 @@ TEST_F(InferenceManagerBuilderTest, GenerateNotFirst)
 }
 
 // Test if only first structure was generated by arguments
-TEST_F(InferenceManagerBuilderTest, GenerateFirst)
+TEST_P(InferenceManagerBuilderTest, GenerateFirst)
 {
   ScMemoryContext & context = *m_ctx;
 
@@ -277,8 +296,8 @@ TEST_F(InferenceManagerBuilderTest, GenerateFirst)
   ScAddr const & rulesSet = context.HelperResolveSystemIdtf(FORMULAS_SET);
   ScAddr const & outputStructure = context.CreateNode(ScType::NodeConstStruct);
 
-  InferenceConfig const & inferenceConfig{
-      GENERATE_ALL_FORMULAS, REPLACEMENTS_FIRST, TREE_ONLY_OUTPUT_STRUCTURE, SEARCH_IN_STRUCTURES};
+  InferenceConfig const & inferenceConfig = GetParam()->getInferenceConfig(
+      {GENERATE_ALL_FORMULAS, REPLACEMENTS_FIRST, TREE_ONLY_OUTPUT_STRUCTURE, SEARCH_IN_STRUCTURES});
   std::unique_ptr<inference::InferenceManagerAbstract> iterationStrategy =
       inference::InferenceManagerFactory::constructDirectInferenceManagerAll(&context, inferenceConfig);
 
@@ -301,7 +320,7 @@ TEST_F(InferenceManagerBuilderTest, GenerateFirst)
   EXPECT_FALSE(targetClassIterator->Next());
 }
 
-TEST_F(InferenceManagerBuilderTest, notGenerateSolutionTree)
+TEST_P(InferenceManagerBuilderTest, notGenerateSolutionTree)
 {
   ScMemoryContext & context = *m_ctx;
 
@@ -317,8 +336,8 @@ TEST_F(InferenceManagerBuilderTest, notGenerateSolutionTree)
   InferenceParams const & inferenceParams{formulasSet, {argument}, inputStructures, outputStructure};
 
   // Create inference manager with `strategy all` using director
-  InferenceConfig const & inferenceConfig{
-      GENERATE_ALL_FORMULAS, REPLACEMENTS_ALL, TREE_ONLY_OUTPUT_STRUCTURE, SEARCH_IN_STRUCTURES};
+  InferenceConfig const & inferenceConfig = GetParam()->getInferenceConfig(
+      {GENERATE_ALL_FORMULAS, REPLACEMENTS_ALL, TREE_ONLY_OUTPUT_STRUCTURE, SEARCH_IN_STRUCTURES});
   std::unique_ptr<inference::InferenceManagerAbstract> iterationStrategy =
       inference::InferenceManagerFactory::constructDirectInferenceManagerAll(&context, inferenceConfig);
 
@@ -337,7 +356,7 @@ TEST_F(InferenceManagerBuilderTest, notGenerateSolutionTree)
   EXPECT_TRUE(context.HelperCheckEdge(targetClass, argument, ScType::EdgeAccessConstPosPerm));
 }
 
-TEST_F(InferenceManagerBuilderTest, generateSolutionTree)
+TEST_P(InferenceManagerBuilderTest, generateSolutionTree)
 {
   ScMemoryContext & context = *m_ctx;
 
@@ -353,7 +372,8 @@ TEST_F(InferenceManagerBuilderTest, generateSolutionTree)
   InferenceParams const & inferenceParams{formulasSet, {argument}, inputStructures, outputStructure};
 
   // Create inference manager with `strategy all` using director
-  InferenceConfig const & inferenceConfig{GENERATE_ALL_FORMULAS, REPLACEMENTS_ALL, TREE_FULL, SEARCH_IN_STRUCTURES};
+  InferenceConfig const & inferenceConfig =
+      GetParam()->getInferenceConfig({GENERATE_ALL_FORMULAS, REPLACEMENTS_ALL, TREE_FULL, SEARCH_IN_STRUCTURES});
   std::unique_ptr<inference::InferenceManagerAbstract> iterationStrategy =
       inference::InferenceManagerFactory::constructDirectInferenceManagerAll(&context, inferenceConfig);
 
@@ -373,7 +393,7 @@ TEST_F(InferenceManagerBuilderTest, generateSolutionTree)
 }
 
 // There are no arguments using fixed formulas arguments -- not generated
-TEST_F(InferenceManagerBuilderTest, SingleUnsuccessfulApplyInference)
+TEST_P(InferenceManagerBuilderTest, SingleUnsuccessfulApplyInference)
 {
   ScMemoryContext & context = *m_ctx;
 
@@ -386,8 +406,8 @@ TEST_F(InferenceManagerBuilderTest, SingleUnsuccessfulApplyInference)
   ScAddr const & rulesSet = context.HelperResolveSystemIdtf(FORMULAS_SET);
   ScAddr const & outputStructure = context.CreateNode(ScType::NodeConstStruct);
 
-  InferenceConfig const & inferenceConfig{
-      GENERATE_ALL_FORMULAS, REPLACEMENTS_ALL, TREE_ONLY_OUTPUT_STRUCTURE, SEARCH_IN_STRUCTURES};
+  InferenceConfig const & inferenceConfig = GetParam()->getInferenceConfig(
+      {GENERATE_ALL_FORMULAS, REPLACEMENTS_ALL, TREE_ONLY_OUTPUT_STRUCTURE, SEARCH_IN_STRUCTURES});
   std::unique_ptr<inference::InferenceManagerAbstract> iterationStrategy =
       inference::InferenceManagerFactory::constructDirectInferenceManagerAll(&context, inferenceConfig);
 
@@ -412,7 +432,7 @@ TEST_F(InferenceManagerBuilderTest, SingleUnsuccessfulApplyInference)
   EXPECT_FALSE(iterator->Next());
 }
 
-TEST_F(InferenceManagerBuilderTest, SingleSuccessfulApplyInferenceWithAccessEdgesSearcher)
+TEST_P(InferenceManagerBuilderTest, SingleSuccessfulApplyInferenceWithAccessEdgesSearcher)
 {
   ScMemoryContext & context = *m_ctx;
 
@@ -425,8 +445,8 @@ TEST_F(InferenceManagerBuilderTest, SingleSuccessfulApplyInferenceWithAccessEdge
   ScAddr const & rulesSet = context.HelperResolveSystemIdtf(FORMULAS_SET);
   ScAddr const & outputStructure = context.CreateNode(ScType::NodeConstStruct);
 
-  InferenceConfig const & inferenceConfig{
-      GENERATE_ALL_FORMULAS, REPLACEMENTS_ALL, TREE_ONLY_OUTPUT_STRUCTURE, SEARCH_ONLY_ACCESS_EDGES_IN_STRUCTURES};
+  InferenceConfig const & inferenceConfig = GetParam()->getInferenceConfig(
+      {GENERATE_ALL_FORMULAS, REPLACEMENTS_ALL, TREE_ONLY_OUTPUT_STRUCTURE, SEARCH_ONLY_ACCESS_EDGES_IN_STRUCTURES});
   std::unique_ptr<inference::InferenceManagerAbstract> iterationStrategy =
       inference::InferenceManagerFactory::constructDirectInferenceManagerAll(&context, inferenceConfig);
 
@@ -448,7 +468,7 @@ TEST_F(InferenceManagerBuilderTest, SingleSuccessfulApplyInferenceWithAccessEdge
   EXPECT_TRUE(context.HelperCheckEdge(targetClass, argument, ScType::EdgeAccessConstPosPerm));
 }
 
-TEST_F(InferenceManagerBuilderTest, OutputStructureContainsGeneratedAndFlagIsGenerated)
+TEST_P(InferenceManagerBuilderTest, OutputStructureContainsGeneratedAndFlagIsGenerated)
 {
   ScMemoryContext & context = *m_ctx;
 
@@ -461,8 +481,12 @@ TEST_F(InferenceManagerBuilderTest, OutputStructureContainsGeneratedAndFlagIsGen
   ScAddr const & rulesSet = context.HelperResolveSystemIdtf(FORMULAS_SET);
   ScAddr const & outputStructure = context.CreateNode(ScType::NodeConstStruct);
 
-  InferenceConfig const & inferenceConfig{
-      GENERATE_ALL_FORMULAS, REPLACEMENTS_ALL, TREE_ONLY_OUTPUT_STRUCTURE, SEARCH_ONLY_ACCESS_EDGES_IN_STRUCTURES, GENERATED_ONLY};
+  InferenceConfig const & inferenceConfig = GetParam()->getInferenceConfig(
+      {GENERATE_ALL_FORMULAS,
+       REPLACEMENTS_ALL,
+       TREE_ONLY_OUTPUT_STRUCTURE,
+       SEARCH_ONLY_ACCESS_EDGES_IN_STRUCTURES,
+       GENERATED_ONLY});
   std::unique_ptr<inference::InferenceManagerAbstract> iterationStrategy =
       inference::InferenceManagerFactory::constructDirectInferenceManagerAll(&context, inferenceConfig);
 
@@ -479,14 +503,15 @@ TEST_F(InferenceManagerBuilderTest, OutputStructureContainsGeneratedAndFlagIsGen
   ScAddr const & targetClass = context.HelperFindBySystemIdtf(TARGET_NODE_CLASS);
   EXPECT_TRUE(targetClass.IsValid());
   EXPECT_TRUE(context.HelperCheckEdge(outputStructure, targetClass, ScType::EdgeAccessConstPosPerm));
-  ScIterator3Ptr const & outputStructureIterator = context.Iterator3(outputStructure, ScType::EdgeAccessConstPosPerm, ScType::Unknown);
+  ScIterator3Ptr const & outputStructureIterator =
+      context.Iterator3(outputStructure, ScType::EdgeAccessConstPosPerm, ScType::Unknown);
   EXPECT_TRUE(outputStructureIterator->Next());
   EXPECT_TRUE(outputStructureIterator->Next());
   EXPECT_TRUE(outputStructureIterator->Next());
   EXPECT_FALSE(outputStructureIterator->Next());
 }
 
-TEST_F(InferenceManagerBuilderTest, OutputStructureContainsGeneratedButFlagIsSearchedAndGenerated)
+TEST_P(InferenceManagerBuilderTest, OutputStructureContainsGeneratedButFlagIsSearchedAndGenerated)
 {
   ScMemoryContext & context = *m_ctx;
 
@@ -499,8 +524,12 @@ TEST_F(InferenceManagerBuilderTest, OutputStructureContainsGeneratedButFlagIsSea
   ScAddr const & rulesSet = context.HelperResolveSystemIdtf(FORMULAS_SET);
   ScAddr const & outputStructure = context.CreateNode(ScType::NodeConstStruct);
 
-  InferenceConfig const & inferenceConfig{
-      GENERATE_ALL_FORMULAS, REPLACEMENTS_ALL, TREE_ONLY_OUTPUT_STRUCTURE, SEARCH_ONLY_ACCESS_EDGES_IN_STRUCTURES, SEARCHED_AND_GENERATED};
+  InferenceConfig const & inferenceConfig = GetParam()->getInferenceConfig(
+      {GENERATE_ALL_FORMULAS,
+       REPLACEMENTS_ALL,
+       TREE_ONLY_OUTPUT_STRUCTURE,
+       SEARCH_ONLY_ACCESS_EDGES_IN_STRUCTURES,
+       SEARCHED_AND_GENERATED});
   std::unique_ptr<inference::InferenceManagerAbstract> iterationStrategy =
       inference::InferenceManagerFactory::constructDirectInferenceManagerAll(&context, inferenceConfig);
 
@@ -517,14 +546,15 @@ TEST_F(InferenceManagerBuilderTest, OutputStructureContainsGeneratedButFlagIsSea
   ScAddr const & targetClass = context.HelperFindBySystemIdtf(TARGET_NODE_CLASS);
   EXPECT_TRUE(targetClass.IsValid());
   EXPECT_TRUE(context.HelperCheckEdge(outputStructure, targetClass, ScType::EdgeAccessConstPosPerm));
-  ScIterator3Ptr const & outputStructureIterator = context.Iterator3(outputStructure, ScType::EdgeAccessConstPosPerm, ScType::Unknown);
+  ScIterator3Ptr const & outputStructureIterator =
+      context.Iterator3(outputStructure, ScType::EdgeAccessConstPosPerm, ScType::Unknown);
   EXPECT_TRUE(outputStructureIterator->Next());
   EXPECT_TRUE(outputStructureIterator->Next());
   EXPECT_TRUE(outputStructureIterator->Next());
   EXPECT_FALSE(outputStructureIterator->Next());
 }
 
-TEST_F(InferenceManagerBuilderTest, OutputStructureContainsSearchedAndFlagIsSearchedAndGenerated)
+TEST_P(InferenceManagerBuilderTest, OutputStructureContainsSearchedAndFlagIsSearchedAndGenerated)
 {
   ScMemoryContext & context = *m_ctx;
 
@@ -536,8 +566,12 @@ TEST_F(InferenceManagerBuilderTest, OutputStructureContainsSearchedAndFlagIsSear
   ScAddr const & rulesSet = context.HelperResolveSystemIdtf(FORMULAS_SET);
   ScAddr const & outputStructure = context.CreateNode(ScType::NodeConstStruct);
 
-  InferenceConfig const & inferenceConfig{
-      GENERATE_UNIQUE_FORMULAS, REPLACEMENTS_ALL, TREE_ONLY_OUTPUT_STRUCTURE, SEARCH_ONLY_ACCESS_EDGES_IN_STRUCTURES, SEARCHED_AND_GENERATED};
+  InferenceConfig const & inferenceConfig = GetParam()->getInferenceConfig(
+      {GENERATE_UNIQUE_FORMULAS,
+       REPLACEMENTS_ALL,
+       TREE_ONLY_OUTPUT_STRUCTURE,
+       SEARCH_ONLY_ACCESS_EDGES_IN_STRUCTURES,
+       SEARCHED_AND_GENERATED});
   std::unique_ptr<inference::InferenceManagerAbstract> iterationStrategy =
       inference::InferenceManagerFactory::constructDirectInferenceManagerAll(&context, inferenceConfig);
 
@@ -554,14 +588,15 @@ TEST_F(InferenceManagerBuilderTest, OutputStructureContainsSearchedAndFlagIsSear
   ScAddr const & targetClass = context.HelperFindBySystemIdtf(TARGET_NODE_CLASS);
   EXPECT_TRUE(targetClass.IsValid());
   EXPECT_TRUE(context.HelperCheckEdge(outputStructure, targetClass, ScType::EdgeAccessConstPosPerm));
-  ScIterator3Ptr const & outputStructureIterator = context.Iterator3(outputStructure, ScType::EdgeAccessConstPosPerm, ScType::Unknown);
+  ScIterator3Ptr const & outputStructureIterator =
+      context.Iterator3(outputStructure, ScType::EdgeAccessConstPosPerm, ScType::Unknown);
   EXPECT_TRUE(outputStructureIterator->Next());
   EXPECT_TRUE(outputStructureIterator->Next());
   EXPECT_TRUE(outputStructureIterator->Next());
   EXPECT_FALSE(outputStructureIterator->Next());
 }
 
-TEST_F(InferenceManagerBuilderTest, OutputStructureDoesNotContainSearchedBecauseFlagIsGenerated)
+TEST_P(InferenceManagerBuilderTest, OutputStructureDoesNotContainSearchedBecauseFlagIsGenerated)
 {
   ScMemoryContext & context = *m_ctx;
 
@@ -573,8 +608,12 @@ TEST_F(InferenceManagerBuilderTest, OutputStructureDoesNotContainSearchedBecause
   ScAddr const & rulesSet = context.HelperResolveSystemIdtf(FORMULAS_SET);
   ScAddr const & outputStructure = context.CreateNode(ScType::NodeConstStruct);
 
-  InferenceConfig const & inferenceConfig{
-      GENERATE_UNIQUE_FORMULAS, REPLACEMENTS_ALL, TREE_ONLY_OUTPUT_STRUCTURE, SEARCH_ONLY_ACCESS_EDGES_IN_STRUCTURES, GENERATED_ONLY};
+  InferenceConfig const & inferenceConfig = GetParam()->getInferenceConfig(
+      {GENERATE_UNIQUE_FORMULAS,
+       REPLACEMENTS_ALL,
+       TREE_ONLY_OUTPUT_STRUCTURE,
+       SEARCH_ONLY_ACCESS_EDGES_IN_STRUCTURES,
+       GENERATED_ONLY});
   std::unique_ptr<inference::InferenceManagerAbstract> iterationStrategy =
       inference::InferenceManagerFactory::constructDirectInferenceManagerAll(&context, inferenceConfig);
 
@@ -588,11 +627,12 @@ TEST_F(InferenceManagerBuilderTest, OutputStructureDoesNotContainSearchedBecause
   EXPECT_TRUE(
       context.HelperCheckEdge(InferenceKeynodes::concept_success_solution, solution, ScType::EdgeAccessConstNegPerm));
 
-  ScIterator3Ptr const & outputStructureIterator = context.Iterator3(outputStructure, ScType::EdgeAccessConstPosPerm, ScType::Unknown);
+  ScIterator3Ptr const & outputStructureIterator =
+      context.Iterator3(outputStructure, ScType::EdgeAccessConstPosPerm, ScType::Unknown);
   EXPECT_FALSE(outputStructureIterator->Next());
 }
 
-TEST_F(InferenceManagerBuilderTest, OutputStructureContainsSearchedAndGeneratedAndFlagIsSearchedAndGenerated)
+TEST_P(InferenceManagerBuilderTest, OutputStructureContainsSearchedAndGeneratedAndFlagIsSearchedAndGenerated)
 {
   ScMemoryContext & context = *m_ctx;
 
@@ -610,8 +650,12 @@ TEST_F(InferenceManagerBuilderTest, OutputStructureContainsSearchedAndGeneratedA
   EXPECT_TRUE(targetClass.IsValid());
   EXPECT_TRUE(context.CreateEdge(ScType::EdgeAccessConstPosPerm, targetClass, argument).IsValid());
 
-  InferenceConfig const & inferenceConfig{
-      GENERATE_UNIQUE_FORMULAS, REPLACEMENTS_ALL, TREE_ONLY_OUTPUT_STRUCTURE, SEARCH_ONLY_ACCESS_EDGES_IN_STRUCTURES, SEARCHED_AND_GENERATED};
+  InferenceConfig const & inferenceConfig = GetParam()->getInferenceConfig(
+      {GENERATE_UNIQUE_FORMULAS,
+       REPLACEMENTS_ALL,
+       TREE_ONLY_OUTPUT_STRUCTURE,
+       SEARCH_ONLY_ACCESS_EDGES_IN_STRUCTURES,
+       SEARCHED_AND_GENERATED});
   std::unique_ptr<inference::InferenceManagerAbstract> iterationStrategy =
       inference::InferenceManagerFactory::constructDirectInferenceManagerAll(&context, inferenceConfig);
 
@@ -627,12 +671,14 @@ TEST_F(InferenceManagerBuilderTest, OutputStructureContainsSearchedAndGeneratedA
 
   ScAddr const & currentClass = context.HelperFindBySystemIdtf(CURRENT_NODE_CLASS);
   EXPECT_TRUE(currentClass.IsValid());
-  size_t const currentClassSize = utils::IteratorUtils::getAllWithType(&context, currentClass, ScType::NodeConst).size();
+  size_t const currentClassSize =
+      utils::IteratorUtils::getAllWithType(&context, currentClass, ScType::NodeConst).size();
   EXPECT_NE(currentClassSize, 0u);
   size_t const targetClassSize = utils::IteratorUtils::getAllWithType(&context, targetClass, ScType::NodeConst).size();
   EXPECT_EQ(currentClassSize, targetClassSize);
   EXPECT_TRUE(context.HelperCheckEdge(outputStructure, targetClass, ScType::EdgeAccessConstPosPerm));
-  ScIterator3Ptr const & targetClassIterator = context.Iterator3(targetClass, ScType::EdgeAccessConstPosPerm, ScType::Unknown);
+  ScIterator3Ptr const & targetClassIterator =
+      context.Iterator3(targetClass, ScType::EdgeAccessConstPosPerm, ScType::Unknown);
   while (targetClassIterator->Next())
   {
     EXPECT_TRUE(context.HelperCheckEdge(outputStructure, targetClassIterator->Get(1), ScType::EdgeAccessConstPosPerm));
@@ -640,4 +686,4 @@ TEST_F(InferenceManagerBuilderTest, OutputStructureContainsSearchedAndGeneratedA
   }
 }
 
-}  // namespace inferenceManagerBuilderTest
+}  // namespace inference::inferenceManagerBuilderTest
