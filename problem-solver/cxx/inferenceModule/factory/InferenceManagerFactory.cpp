@@ -82,6 +82,7 @@ std::unique_ptr<InferenceManagerAbstract> InferenceManagerFactory::constructDire
   std::shared_ptr<TemplateManagerAbstract> templateManager = std::make_shared<TemplateManager>(context);
   templateManager->setReplacementsUsingType(inferenceFlowConfig.replacementsUsingType);
   templateManager->setGenerationType(inferenceFlowConfig.generationType);
+  templateManager->setFillingType(inferenceFlowConfig.fillingType);
   strategyTarget->setTemplateManager(templateManager);
 
   std::shared_ptr<TemplateSearcherAbstract> templateSearcher;
