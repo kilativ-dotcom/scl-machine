@@ -19,9 +19,12 @@ public:
       ScTemplateParams const & templateParams,
       ScAddrHashSet const & variables,
       Replacements & result) override;
-
-private:
-  std::unique_ptr<ScAddrHashSet> contentOfAllInputStructures;
+  void searchTemplateWithContent(
+      ScTemplate const & searchTemplate,
+      ScAddr const & templateAddr,
+      ScTemplateParams const & templateParams,
+      Replacements & result) override;
+  map<std::string, std::string> getTemplateLinksContent(ScAddr const & templateAddr) override;
 };
 
 }  // namespace inference
