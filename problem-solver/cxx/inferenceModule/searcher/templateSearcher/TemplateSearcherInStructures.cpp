@@ -21,11 +21,12 @@ TemplateSearcherInStructures::TemplateSearcherInStructures(
     ScAddrVector const & otherInputStructures)
   : TemplateSearcherAbstract(context)
 {
+  this->contentOfAllInputStructures = std::make_unique<ScAddrHashSet>();
   inputStructures = otherInputStructures;
 }
 
 TemplateSearcherInStructures::TemplateSearcherInStructures(ScMemoryContext * context)
-  : TemplateSearcherAbstract(context)
+  : TemplateSearcherInStructures(context, {})
 {
 }
 
@@ -39,6 +40,15 @@ void TemplateSearcherInStructures::searchTemplate(
   ScTemplate searchTemplate;
   if (context->HelperBuildTemplate(searchTemplate, templateAddr, templateParams))
   {
+    this->contentOfAllInputStructures->clear();
+    SC_LOG_DEBUG("start input structures processing");
+    for (auto const & inputStructure : inputStructures)
+    {
+      ScAddrVector const & elements =
+          utils::IteratorUtils::getAllWithType(context, inputStructure, ScType::Unknown);
+      contentOfAllInputStructures->insert(elements.cbegin(), elements.cend());
+    }
+    SC_LOG_DEBUG("input structures processed, found " << contentOfAllInputStructures->size() << " elements");
     if (context->HelperCheckEdge(
             InferenceKeynodes::concept_template_with_links, templateAddr, ScType::EdgeAccessConstPosPerm))
     {
@@ -70,10 +80,7 @@ void TemplateSearcherInStructures::searchTemplate(
           },
           [this](ScAddr const & item) -> bool {
             // Filter result item belonging to any of the input structures
-            return std::any_of(
-                inputStructures.cbegin(), inputStructures.cend(), [&item, this](ScAddr const & structure) -> bool {
-                  return context->HelperCheckEdge(structure, item, ScType::EdgeAccessConstPosPerm);
-                });
+            return contentOfAllInputStructures->count(item);
           });
     }
   }
@@ -113,21 +120,14 @@ void TemplateSearcherInStructures::searchTemplateWithContent(
       },
       [&linksContentMap, this](ScTemplateSearchResultItem const & item) -> bool {
         // Filter result item by the same content and belonging to any of the input structures
-        bool contentIdentical = isContentIdentical(item, linksContentMap);
-        bool isElementInStructures = std::any_of(
-            inputStructures.cbegin(), inputStructures.cend(), [&item, this](ScAddr const & structure) -> bool {
-              bool result = true;
-              for (size_t i = 0; i < item.Size(); i++)
-              {
-                if (!context->HelperCheckEdge(structure, item[i], ScType::EdgeAccessConstPosPerm))
-                {
-                  result = false;
-                  break;
-                }
-              }
-              return result;
-            });
-        return contentIdentical && isElementInStructures;
+        if (!isContentIdentical(item, linksContentMap))
+          return false;
+        for (size_t i = 0; i < item.Size(); i++)
+        {
+          if (!contentOfAllInputStructures->count(item[i]))
+            return false;
+        }
+        return true;
       });
 }
 
@@ -140,10 +140,7 @@ std::map<std::string, std::string> TemplateSearcherInStructures::getTemplateLink
   {
     ScAddr const & linkAddr = linksIterator->Get(2);
     std::string stringContent;
-    if (std::any_of(
-            inputStructures.cbegin(), inputStructures.cend(), [&linkAddr, this](ScAddr const & structure) -> bool {
-              return context->HelperCheckEdge(structure, linkAddr, ScType::EdgeAccessConstPosPerm);
-            }))
+    if (contentOfAllInputStructures->count(linkAddr))
     {
       context->GetLinkContent(linkAddr, stringContent);
       linksContent.emplace(to_string(linkAddr.Hash()), stringContent);
