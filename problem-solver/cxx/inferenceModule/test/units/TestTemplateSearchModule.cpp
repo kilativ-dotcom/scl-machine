@@ -224,7 +224,7 @@ TEST_F(TemplateSearchManagerTest, SearchWithExistedConstructionsTest)
         &context);
   templateSearcher->setInputStructures({structure_1, structure_2, structure_3});
   templateSearcher->setOutputStructureFillingType(SEARCHED_AND_GENERATED);
-  Replacements searchResults;
+  inference::Replacements searchResults;
   templateSearcher->searchTemplate(
       searchTemplateAddr,
       std::vector<ScTemplateParams>{{}},
