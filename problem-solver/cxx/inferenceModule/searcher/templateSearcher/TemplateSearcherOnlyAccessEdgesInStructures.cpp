@@ -35,7 +35,7 @@ map<std::string, std::string> TemplateSearcherOnlyAccessEdgesInStructures::getTe
 
 void TemplateSearcherOnlyAccessEdgesInStructures::prepareBeforeSearch()
 {
-  this->contentOfAllInputStructures->clear();
+//  this->contentOfAllInputStructures->clear();
 //  if (replacementsUsingType == REPLACEMENTS_ALL)
 //  {
 //    SC_LOG_DEBUG("start input structures processing");
