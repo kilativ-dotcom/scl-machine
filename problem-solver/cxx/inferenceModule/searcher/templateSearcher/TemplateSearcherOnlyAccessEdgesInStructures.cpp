@@ -36,23 +36,33 @@ map<std::string, std::string> TemplateSearcherOnlyAccessEdgesInStructures::getTe
 void TemplateSearcherOnlyAccessEdgesInStructures::prepareBeforeSearch()
 {
   this->contentOfAllInputStructures->clear();
-  if (replacementsUsingType == REPLACEMENTS_ALL)
-  {
-    SC_LOG_DEBUG("start input structures processing");
-    for (auto const & inputStructure : inputStructures)
-    {
-      ScAddrVector const & edges =
-          utils::IteratorUtils::getAllWithType(context, inputStructure, ScType::EdgeAccess);
-      contentOfAllInputStructures->insert(edges.cbegin(), edges.cend());
-    }
-    SC_LOG_DEBUG("input structures processed, found " << contentOfAllInputStructures->size() << " edges");
-  }
+//  if (replacementsUsingType == REPLACEMENTS_ALL)
+//  {
+//    SC_LOG_DEBUG("start input structures processing");
+//    for (auto const & inputStructure : inputStructures)
+//    {
+//      ScAddrVector const & edges =
+//          utils::IteratorUtils::getAllWithType(context, inputStructure, ScType::EdgeAccess);
+//      contentOfAllInputStructures->insert(edges.cbegin(), edges.cend());
+//    }
+//    SC_LOG_DEBUG("input structures processed, found " << contentOfAllInputStructures->size() << " edges");
+//  }
 }
 
 bool TemplateSearcherOnlyAccessEdgesInStructures::isValidElement(ScAddr const & element) const
 {
   if (replacementsUsingType == REPLACEMENTS_ALL)
-    return !context->GetElementType(element).BitAnd(ScType::EdgeAccess) || contentOfAllInputStructures->count(element);
+  {
+    if (!context->GetElementType(element).BitAnd(ScType::EdgeAccess) || contentOfAllInputStructures->contains(element))
+      return true;
+    bool const inAny =
+        std::any_of(inputStructures.cbegin(), inputStructures.cend(), [&element, this](ScAddr const & inputStructure) {
+          return context->HelperCheckEdge(inputStructure, element, ScType::EdgeAccessConstPosPerm);
+        });
+    if (inAny)
+      contentOfAllInputStructures->insert(element);
+    return inAny;
+  }
   else
     return !context->GetElementType(element).BitAnd(ScType::EdgeAccess) ||
            std::any_of(

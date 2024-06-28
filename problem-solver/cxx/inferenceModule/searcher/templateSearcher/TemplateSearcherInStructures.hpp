@@ -12,6 +12,8 @@
 #include "sc-memory/sc_memory.hpp"
 #include "sc-memory/sc_addr.hpp"
 
+#include "model/LRUScAddrSet.hpp"
+
 #include "utils/ReplacementsUtils.hpp"
 #include "TemplateSearcherAbstract.hpp"
 
@@ -31,7 +33,7 @@ public:
       Replacements & result) override;
 
 protected:
-  std::unique_ptr<ScAddrHashSet> contentOfAllInputStructures;
+  std::unique_ptr<LRUScAddrSet> contentOfAllInputStructures;
 
 private:
   void searchTemplateWithContent(

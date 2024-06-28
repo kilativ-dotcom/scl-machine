@@ -21,7 +21,7 @@ TemplateSearcherInStructures::TemplateSearcherInStructures(
     ScAddrVector const & otherInputStructures)
   : TemplateSearcherAbstract(context)
 {
-  this->contentOfAllInputStructures = std::make_unique<ScAddrHashSet>();
+  this->contentOfAllInputStructures = std::make_unique<LRUScAddrSet>(2*1000*1000);
   inputStructures = otherInputStructures;
 }
 
@@ -144,16 +144,16 @@ std::map<std::string, std::string> TemplateSearcherInStructures::getTemplateLink
 void TemplateSearcherInStructures::prepareBeforeSearch()
 {
   this->contentOfAllInputStructures->clear();
-  if (replacementsUsingType == REPLACEMENTS_ALL)
-  {
-    SC_LOG_DEBUG("start input structures processing");
-    for (auto const & inputStructure : inputStructures)
-    {
-      ScAddrVector const & elements = utils::IteratorUtils::getAllWithType(context, inputStructure, ScType::Unknown);
-      contentOfAllInputStructures->insert(elements.cbegin(), elements.cend());
-    }
-    SC_LOG_DEBUG("input structures processed, found " << contentOfAllInputStructures->size() << " elements");
-  }
+//  if (replacementsUsingType == REPLACEMENTS_ALL)
+//  {
+//    SC_LOG_DEBUG("start input structures processing");
+//    for (auto const & inputStructure : inputStructures)
+//    {
+//      ScAddrVector const & elements = utils::IteratorUtils::getAllWithType(context, inputStructure, ScType::Unknown);
+//      contentOfAllInputStructures->insert(elements.cbegin(), elements.cend());
+//    }
+//    SC_LOG_DEBUG("input structures processed, found " << contentOfAllInputStructures->size() << " elements");
+//  }
 }
 
 bool TemplateSearcherInStructures::isValidElement(ScAddr const & element) const
@@ -163,5 +163,14 @@ bool TemplateSearcherInStructures::isValidElement(ScAddr const & element) const
       return context->HelperCheckEdge(inputStructure, element, ScType::EdgeAccessConstPosPerm);
     });
   else
-    return contentOfAllInputStructures->count(element);
+  {
+    if (contentOfAllInputStructures->contains(element))
+      return true;
+    bool const inAny = std::any_of(inputStructures.cbegin(), inputStructures.cend(), [&element, this](ScAddr const &inputStructure){
+      return context->HelperCheckEdge(inputStructure, element, ScType::EdgeAccessConstPosPerm);
+    });
+    if (inAny)
+      contentOfAllInputStructures->insert(element);
+    return inAny;
+  }
 }
